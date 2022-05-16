@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users Page</title>
+</head>
+
+<body>
+    <h1>Users</h1>
+    <ul>
+        <% for(let user of userArr) {%>
+        <li>
+            <b><%=user.title%></b> <%=user.username%>
+        </li>
+        <% }%>
+    </ul>
+
+    <a href="/add-user">Add user</a>
+</body>
+
+</html>

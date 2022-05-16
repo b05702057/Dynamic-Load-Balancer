@@ -1,0 +1,17 @@
+{
+  "name": "dynamic_load_balancer_app_server",
+  "version": "1.0.0",
+  "description": "App server for general purpose dynamic load balancer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kiet Pham",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.0",
+    "cluster": "^0.7.7",
+    "ejs": "^3.1.8",
+    "express": "^4.18.1"
+  }
+}
