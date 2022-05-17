@@ -55,7 +55,7 @@ if (cluster.isMaster) {
     // app.use statements go here
 
     app.use(bodyParser.json()); // handle json data, needed for axios requests to put things in req.body
-	app.use(bodyParser.urlencoded({extended: true}));
+    app.use(bodyParser.urlencoded({extended: true}));
 
     app.set('views', path.join(__dirname, 'views'))
     app.set('view engine', 'ejs')
@@ -80,19 +80,18 @@ if (cluster.isMaster) {
     ];
 
     app.get('/', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving root`);
 
         res.send('<h1>ROOT ROUTE!</h1>');
     });
 
     app.get('/list-users', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
-
+        console.log(`Worker ${process.pid} serving get list-users`);
         res.render('./index', { userArr });
     });
 
     app.get('/user-info/:userId', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving user-info`);
 
         const { userId } = req.params;
         const user = userArr.find(user => user.id === userId);
@@ -101,13 +100,13 @@ if (cluster.isMaster) {
 
 
     app.get('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving get add-user`);
 
         res.render('./add_user');
     });
 
     app.post('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving post add-user`);
 
         const { title, username } = req.body;
 
@@ -125,7 +124,7 @@ if (cluster.isMaster) {
     });
 
     app.get('/long-computation/:N', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving long-computation`);
 
         const { N } = req.params;
 
@@ -141,7 +140,7 @@ if (cluster.isMaster) {
     });
 
     app.get('*', (req, res) => {
-        console.log(`Worker ${process.pid} serving`);
+        console.log(`Worker ${process.pid} serving *`);
 
         res.send('<h1>CATCH ALL ROUTE!</h1>');
     });
