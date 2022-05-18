@@ -91,9 +91,10 @@ if (cluster.isMaster) {
     });
 
     app.get('/user-info/:userId', (req, res) => {
-        console.log(`Worker ${process.pid} serving user-info`);
-
         const { userId } = req.params;
+
+        console.log(`Worker ${process.pid} serving user-info userId: ${userId}`);
+
         const user = userArr.find(user => user.id === userId);
         res.send(user);
     });

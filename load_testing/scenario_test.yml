@@ -1,16 +1,30 @@
 config:
-  target: "http://localhost:8080"
+  target: "http://localhost:3000"
   phases:
     - duration: 5
       arrivalRate: 5
       name: Warm up
     - duration: 20
       arrivalRate: 5
-      rampTo: 200
+      rampTo: 100
       name: Ramp up load
     - duration: 20
-      arrivalRate: 200
+      arrivalRate: 100
       name: Sustained load
+  variables:
+    userId:
+      - "1"
+      - "1"
+      - "1"
+      - "1"
+      - "1"
+      - "1"
+      - "1"
+      - "1"
+      - "2"
+      - "2"
+      - "2"
+      - "3"
 
 
 scenarios:
@@ -18,9 +32,9 @@ scenarios:
     flow:
       - get:
           url: "/list-users"
-    weight: 8
+    weight: 3
   - name: "Displaying user id 2"
     flow:
       - get:
-          url: "/user-info/2"
-    weight: 2
+          url: "/user-info/{{ userId }}"
+    weight: 7
