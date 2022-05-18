@@ -1,0 +1,16 @@
+{
+  "name": "dynamic_load_balancer_front_end",
+  "version": "1.0.0",
+  "description": "\"Front end for general purpose dynamic load balancer\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kiet Pham",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "cluster": "^0.7.7",
+    "express": "^4.18.1"
+  }
+}
