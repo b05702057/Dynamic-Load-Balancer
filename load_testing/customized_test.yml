@@ -1,0 +1,31 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 5
+      arrivalRate: 5
+      name: Warm up
+    - duration: 20
+      arrivalRate: 5
+      rampTo: 100
+      name: Ramp up load
+    - duration: 20
+      arrivalRate: 100
+      name: Sustained load
+  payload:
+      # path is relative to the location of the test script
+      path: "users.csv"
+      fields:
+        - "userId"
+      order: sequence
+
+scenarios:
+  - name: "Listing users"
+    flow:
+      - get:
+          url: "/list-users"
+    weight: 3
+  - name: "Displaying user id 2"
+    flow:
+      - get:
+          url: "/user-info/{{ userId }}"
+    weight: 7
