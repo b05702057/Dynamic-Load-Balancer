@@ -7,8 +7,10 @@ const   express     = require('express'),
 const cluster = require('cluster');
 
 const totalNumCPUs = require("os").cpus().length;
+// const totalNumCPUs = 1;  // TODO testing
 
 const serverPort = 3000;
+const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
 
 
 if (cluster.isMaster) {
@@ -176,6 +178,14 @@ if (cluster.isMaster) {
         });
     });
 
+    app.get('/update-shard-map', (req, res) => {
+        console.log(`Worker ${process.pid} serving update-shard-map`);
+
+        // Todo update shard maps of all processes
+
+        res.send('Front end dummy reply');
+    });
+
     app.get('*', (req, res) => {
         console.log(`Worker ${process.pid} serving *`);
 
@@ -193,5 +203,7 @@ if (cluster.isMaster) {
         });
     });
 
-    app.listen(serverPort);
+    var server = app.listen(serverPort);
+    server.keepAliveTimeout = CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS;
+    // server.headersTimeout = 31000; 
 }

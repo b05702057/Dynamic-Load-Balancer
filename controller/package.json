@@ -1,0 +1,14 @@
+{
+  "name": "dynamic_load_balancer_controller",
+  "version": "1.0.0",
+  "description": "Controller service for general purpose dynamic load balancer",
+  "main": "controller.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kiet Pham",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.27.2"
+  }
+}
