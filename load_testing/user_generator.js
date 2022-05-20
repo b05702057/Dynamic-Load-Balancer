@@ -32,6 +32,26 @@ function generatePhaseElements(phases, phase_idx, sample_lists, element_list) {
     return phase_idx + 1;
 }
 
+function addRequestTypes(element_list) {
+    stored_keys = new Set();
+    output_list = []
+    element_list.forEach(element => {
+        // 0 stands for "put", and 1 stands for get
+        random = getRandomInt(2);
+        if (random === 0) {
+            output_list.push(element + "," + "put");
+            stored_keys.add(element);
+        } else {
+            if (stored_keys.has(element)) {
+                output_list.push(element + "," + "get");
+            } else {
+                output_list.push(element + "," + "put");
+            }
+        }
+    })
+    return output_list;
+}
+
 // make the sum 1
 function normalize(distribution) {
     var sum = distribution.reduce((a, b) => a + b, 0);
@@ -114,6 +134,7 @@ sample_list1 = generatePhasePattern(3, NORMAL); // normal distribution
 sample_list2 = generatePhasePattern(3, UNIFORM); // uniform distribution
 sample_list3 = generatePhasePattern(3, [1, 2, 6]); // user3 is hot
 sample_lists = [sample_list1, sample_list2, sample_list3]; // modify this list to customize the load for each phase
+// The sample lists are currently used as user id's, but we can use them as index and create new sample lists as string keys.
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
@@ -126,5 +147,6 @@ phase_idx = generatePhaseElements(phases, phase_idx, sample_lists, element_list)
 phase_idx = generatePhaseElements(phases, phase_idx, sample_lists, element_list); // phase 2
 
 // write the elements
+element_list = addRequestTypes(element_list);
 elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
