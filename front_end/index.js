@@ -113,6 +113,24 @@ if (cluster.isMaster) {
         callback(null, "worker updated!");
     });
 
+    function findSliceForKey(sortedSliceToServer, hashedKey) {
+        let startIdx = 0;
+        let endIdx = sortedSliceToServer.length - 1;
+
+        while (startIdx <= endIdx) {
+            mid = Math.floor((startIdx - endIdx) / 2);
+            if (hashedKey >= sortedSliceToServer[mid].start && hashedKey <= sortedSliceToServer[mid].end) {
+                return sortedSliceToServer[mid];
+            } else if (hashedKey > sortedSliceToServer[mid].end) {
+                startIdx = mid + 1;
+            } else if (hashedKey < sortedSliceToServer[mid].start) {
+                endIdx = mid - 1;
+            }
+        }
+
+        return null;
+    }
+
     const app = express();
     
     // app.use statements go here
@@ -243,6 +261,9 @@ if (cluster.isMaster) {
         const { requestType, key, value } = req.body;
 
         console.log(req.body);
+
+        // TODO make sure the finding correct slice to server and updating request count
+        // do not happen across any async point to avoid using locks.
         
         // TODO now using the only client but should use mapping calculations later
         appServerAxiosClients[0].post('/kv-request', {
