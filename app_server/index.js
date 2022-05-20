@@ -268,6 +268,7 @@ if (cluster.isMaster) {
         });
 
         // We wont need this because by default we load balance on request rate.
+        // TODO TESTING
         cpu.usage()
             .then(cpuPercentage => {
                 console.log(`Current cpu usage % is ${cpuPercentage}`);

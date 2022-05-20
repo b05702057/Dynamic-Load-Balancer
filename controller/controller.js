@@ -23,7 +23,7 @@ let sorted_slice_to_server = [
         serverIndex: 0,
     },
     {
-        slice: {start: 20, end: 40},
+        slice: {start: 21, end: 40},
         serverIndex: 0,
     },
 ]; // TODO TESTING VALUES
@@ -97,7 +97,7 @@ function getLoadFromAppServers() {
 // Then can add rejection for retry in back ends if strong consistency is neede
 function sendUpdatedMappings() {
 
-    let dummySlicesArray = [{start: 100, end: 200}];  // TODO testing
+    let dummySlicesArray = [{start: 100, end: 200}, {start: 201, end: 400}];  // TODO testing
     console.log(dummySlicesArray);
     
     // TODO wait for max heap implemenation?
