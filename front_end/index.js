@@ -1,7 +1,10 @@
 const   express     = require('express'),
 	    bodyParser  = require('body-parser'),
         path        = require('node:path'),
-        axios = require('axios');
+        axios       = require('axios'),
+        Hub         = require('cluster-hub');
+
+var hub = new Hub();
 
 
 const cluster = require('cluster');
@@ -11,6 +14,8 @@ const totalNumCPUs = require("os").cpus().length;
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
+
+const UPDATE_SHARD_MAP_HUB_MESSAGE = 'updateShardMap';
 
 
 if (cluster.isMaster) {
@@ -51,8 +56,43 @@ if (cluster.isMaster) {
 	for (var i = 0; i < totalNumCPUs; i++) {
 		spawn(i);
 	}
+
+    function hubRequestWorkerUpdateShardMapPromise(hub, data, worker) {
+        return new Promise((resolve, reject) => {
+            hub.requestWorker(worker, UPDATE_SHARD_MAP_HUB_MESSAGE, data, (err, workerRes) => {
+                if (err) return reject(err);
+                resolve(workerRes);
+            });
+        })
+    }
+
+    hub.on(UPDATE_SHARD_MAP_HUB_MESSAGE, function (data, sender, callback) {
+        let all_promises = [];
+        for (let i = 0; i < workers.length; i++) {
+            all_promises.push(hubRequestWorkerUpdateShardMapPromise(hub, data, workers[i]));
+        }
+        
+        Promise.all(all_promises)
+        .then((values) => {
+            callback(null, "success in updating shard maps!");
+        })
+        .catch((err) => {
+            callback(err, "ERROR in updating shard map!");
+        });
+    });
 } else {
     console.log(`Worker with pid: ${process.pid} running`);
+
+    // Array of slice, server_id pair object. i.e "shard map"
+    let sorted_slice_to_server = [];
+
+    // Update shard map
+    hub.on(UPDATE_SHARD_MAP_HUB_MESSAGE, function (data, sender, callback) {
+        sorted_slice_to_server = data;
+        console.log(`Worker ${process.pid} updated sorted_slice_to_server: ` + JSON.stringify(sorted_slice_to_server));
+        
+        callback(null, "worker updated!");
+    });
 
     const app = express();
     
@@ -178,12 +218,27 @@ if (cluster.isMaster) {
         });
     });
 
-    app.get('/update-shard-map', (req, res) => {
+    app.post('/update-shard-map', (req, res) => {
         console.log(`Worker ${process.pid} serving update-shard-map`);
 
+        const { sorted_slice_to_server } =  req.body;
+        
         // Todo update shard maps of all processes
+        hub.requestMaster(UPDATE_SHARD_MAP_HUB_MESSAGE, sorted_slice_to_server, (err, masterRes) => {
+            if (err !== null) {
+                console.log('Error updating shard Map');
+                console.log(err);
 
-        res.send('Front end dummy reply');
+                // Error code 500
+                res.status(500).send({
+                    message: 'Error updating shard map'
+                });
+            } else {
+                console.log('Got response from master: ');
+                console.log(masterRes);
+                res.send(masterRes);
+            }
+        });
     });
 
     app.get('*', (req, res) => {

@@ -16,9 +16,7 @@ const totalNumCPUs = require("os").cpus().length;
 
 const serverPort = 8080;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
-
-let temporary_slice_req_count_map = {};
-temporary_slice_req_count_map["slice_1"] = 100;
+const REQUEST_LOAD_HUB_MESSAGE = 'requestLoad';
 
 if (cluster.isMaster) {
     console.log(`Total num cpus: ${totalNumCPUs}`);
@@ -57,68 +55,51 @@ if (cluster.isMaster) {
         spawn(i);
     }
 
-    function hubRequestWorkerPromise(hub, worker) {
+    function hubRequestWorkerRequestLoadPromise(hub, worker) {
         return new Promise((resolve, reject) => {
-            hub.requestWorker(worker, 'requestLoad', {}, (err, workerRes) => {
+            hub.requestWorker(worker, REQUEST_LOAD_HUB_MESSAGE, {}, (err, workerRes) => {
                 if (err) return reject(err);
                 resolve(workerRes);
             });
         })
     }
 
-    // Aggregate results
-    hub.on('requestLoad', function (data, sender, callback) {
-
+    // Aggregate slices request counts
+    hub.on(REQUEST_LOAD_HUB_MESSAGE, function (data, sender, callback) {
         let all_promises = [];
         for (let i = 0; i < workers.length; i++) {
-            all_promises.push(hubRequestWorkerPromise(hub, workers[i]));
+            all_promises.push(hubRequestWorkerRequestLoadPromise(hub, workers[i]));
         }
 
         let aggregatedSliceReqCounts = {};
         
-        Promise.all(all_promises).then((values) => {
-            values.forEach((sliceReqCounts, i) => {
-                for (const [key, value] of Object.entries(sliceReqCounts)) {
-                    if (aggregatedSliceReqCounts[key] === undefined) {
-                        aggregatedSliceReqCounts[key] = 0;
-                    }
-                    aggregatedSliceReqCounts[key] += value;
+        Promise.all(all_promises)
+        .then((allWorkersSliceReqCounts) => {
+            for (const sliceReqCounts of allWorkersSliceReqCounts) {
+                for (const [slice, reqCount] of Object.entries(sliceReqCounts)) {
+                    // Increment (or initialize to 0 then increment if not exist)
+                    aggregatedSliceReqCounts[slice] = (aggregatedSliceReqCounts[slice] || 0) + reqCount;
                 }
-            })
+            }
 
             callback(null, aggregatedSliceReqCounts);
+        })
+        .catch((err) => {
+            callback(err, "ERROR in getting load!");
         });
-
-
-        // const requestWorkerPromise = (hub) => {
-        //     return new Promise((resolve, reject) => {
-        //         hub.requestWorker(workers[0], 'requestLoad', {}, (err, workerRes) => {
-        //             if (err) return reject(err);
-        //             resolve(workerRes);
-        //         });
-        //     })
-        // };
-        // requestWorkerPromise(hub)
-        // .then(workerRes => {
-        //     console.log(workerRes);
-        // })
-        // .catch(err => {
-        //     console.log(err);
-        // });
-
-
-        // for (const [key, value] of Object.entries(object)) {
-        //     console.log(key, value);
-        // }
-
-        // callback(null, temporary_slice_req_count_map);
     });
 
 } else {
     console.log(`Worker with pid: ${process.pid} running`);
 
-    hub.on('requestLoad', function (data, sender, callback) {
-        callback(null, temporary_slice_req_count_map);
+    // testing
+    let dummy_slice = {start: 10, end: 20};
+    // Maps slice to request count
+    let slices_info = {};
+    slices_info[dummy_slice] = 200;
+
+    hub.on(REQUEST_LOAD_HUB_MESSAGE, function (data, sender, callback) {
+        callback(null, slices_info);
     });
 
     const app = express();
@@ -218,32 +199,25 @@ if (cluster.isMaster) {
         // Communicate with all processes to aggregate slices req count info
         console.log('Sending hub requestLoad message to master');
 
-        hub.requestMaster('requestLoad', {}, (err, masterRes) => {
+        hub.requestMaster(REQUEST_LOAD_HUB_MESSAGE, {}, (err, masterRes) => {
             if (err !== null) {
                 console.log('Error requesting load');
                 console.log(err);
             } else {
                 console.log('Got response from master: ');
                 console.log(masterRes);
+                // Send back load
+                res.send(masterRes);
             }
         });
 
-        // Send back #req per key slice etc.
-
-        // res.send('App server dummy reply');
-
-        // Sending dummy cpu utilization for reference.
-        // We wont use this because by default we load balance on request rate.
+        // We wont need this because by default we load balance on request rate.
         cpu.usage()
             .then(cpuPercentage => {
-                res.send(`App server dummy reply: cpu % is ${cpuPercentage}`);
-            })
-            .catch(e => {
-                res.send(`Error: App server dummy reply: unable to get cpu %: ${e}`);
+                console.log(`Dummy: cpu % is ${cpuPercentage}`);
             });
     });
-
-
+    
     app.get('*', (req, res) => {
         console.log(`Worker ${process.pid} serving *`);
 
