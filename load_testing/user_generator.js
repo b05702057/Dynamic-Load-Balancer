@@ -21,21 +21,44 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-function generatePhaseElements(phases, phase_idx, sample_lists, element_list) {
+// generate a random key/value
+function getRandomString(max_length) {
+    var result = '';
+    var result_length = getRandomInt(max_length) + 1;
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < result_length; i++ ) {
+      result += characters.charAt(
+          Math.floor(Math.random() * charactersLength)
+        );
+    }
+   return result;
+}
+
+function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) {
     cur_phase = phases[phase_idx];
     request_num = cur_phase.duration * cur_phase.arrivalRate;
     sample_list = sample_lists[phase_idx];
     for (let i = 0; i < request_num; i++) {
         idx = getRandomInt(sample_list.length);
-        element_list.push(sample_list[idx]);
+        element_list.push(keys[sample_list[idx]]);
     }
     return phase_idx + 1;
 }
 
+function addRequestValues(element_list, max_value_length) {
+    var output_list = []
+    element_list.forEach(element => {
+        var random_value = getRandomString(max_value_length);
+        output_list.push(element + "," + random_value);
+    })
+    return output_list;
+}
+
 // make sure "set" is called before "get" for each key
 function addRequestTypes(element_list) {
-    stored_keys = new Set();
-    output_list = []
+    var stored_keys = new Set();
+    var output_list = []
     element_list.forEach(element => {
         // 0 stands for "set", and 1 stands for get
         random = getRandomInt(2);
@@ -106,6 +129,19 @@ function generate_distribution(key_num, distribution) {
     }
 }
 
+// find the first element in the array that >= target
+function getFisrtBiggerElement(start, end, array, target) {
+    if (start === end) {
+        return start;
+    }
+
+    const mid = Math.floor((start + end) / 2);
+    if (array[mid] < target) {
+        return getFisrtBiggerElement(mid + 1, end, array, target);
+    }
+    return getFisrtBiggerElement(start, mid, array, target);
+}
+
 // check different distributions here.
 // https://statisticsblog.com/probability-distributions/
 function generatePhasePattern(key_num, distribution) {
@@ -118,36 +154,40 @@ function generatePhasePattern(key_num, distribution) {
     sample_list = []
     for (let i = 0; i < 100; i++) {
         var random = Math.random();
-        for (let j = 0; j < key_num; j++) {
-            if (cdf[j] >= random) {
-                sample_list.push(j + 1);
-                break;
-            }
-        }
+        sample_list.push(getFisrtBiggerElement(0, cdf.length - 1, cdf, random)); // binary search
     }
     return sample_list;
 }
 
+// generate keys
+var keys = new Set();
+const key_num = 10;
+const max_key_length = 10
+while (keys.size < key_num) {
+    keys.add(getRandomString(max_key_length));
+}
+keys = Array.from(keys);
 
 // define load patterns
-element_list = []; // output
-sample_list1 = generatePhasePattern(3, NORMAL); // normal distribution
-sample_list2 = generatePhasePattern(3, UNIFORM); // uniform distribution
-sample_list3 = generatePhasePattern(3, [1, 2, 6]); // user3 is hot
-sample_lists = [sample_list1, sample_list2, sample_list3]; // modify this list to customize the load for each phase
-// The sample lists are currently used as user id's, but we can use them as index and create new sample lists as string keys.
+var element_list = []; // output
+var sample_list1 = generatePhasePattern(key_num, NORMAL); // normal distribution
+var sample_list2 = generatePhasePattern(key_num, UNIFORM); // uniform distribution
+var sample_list3 = generatePhasePattern(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]); // The third key is hot.
+var sample_lists = [sample_list1, sample_list2, sample_list3]; // modify this list to customize the load for each phase
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
-phases = doc.config.phases;
-phase_idx = 0;
+var phases = doc.config.phases;
+var phase_idx = 0;
 
 // generate elements for each phase
-phase_idx = generatePhaseElements(phases, phase_idx, sample_lists, element_list); // phase 0
-phase_idx = generatePhaseElements(phases, phase_idx, sample_lists, element_list); // phase 1
-phase_idx = generatePhaseElements(phases, phase_idx, sample_lists, element_list); // phase 2
+phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 0
+phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 1
+phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 2
 
 // write the elements
+const max_value_length = 15;
+element_list = addRequestValues(element_list, max_value_length);
 element_list = addRequestTypes(element_list);
-elements = element_list.join("\n");
+var elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
