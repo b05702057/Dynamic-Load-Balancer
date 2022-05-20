@@ -4,7 +4,7 @@ const http = require('node:http');
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
-const CLIENT_KEEP_ALIVE_MSECS = 20000;
+const AXIOS_CLIENT_KEEP_ALIVE_MSECS = 20000;
 
 
 const frontEndAddresses = ['http://localhost:3000/'];
@@ -37,7 +37,7 @@ function initialize() {
             timeout: AXIOS_CLIENT_TIMEOUT,
             httpAgent: new http.Agent({ 
                 keepAlive: true,
-                keepAliveMsecs: CLIENT_KEEP_ALIVE_MSECS 
+                keepAliveMsecs: AXIOS_CLIENT_KEEP_ALIVE_MSECS 
             }),
         });
     }
@@ -48,7 +48,7 @@ function initialize() {
             timeout: AXIOS_CLIENT_TIMEOUT,
             httpAgent: new http.Agent({ 
                 keepAlive: true,
-                keepAliveMsecs: CLIENT_KEEP_ALIVE_MSECS
+                keepAliveMsecs: AXIOS_CLIENT_KEEP_ALIVE_MSECS
             }),
         });
     }

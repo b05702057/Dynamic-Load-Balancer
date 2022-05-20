@@ -2,7 +2,8 @@ const   express     = require('express'),
 	    bodyParser  = require('body-parser'),
         path        = require('node:path'),
         axios       = require('axios'),
-        Hub         = require('cluster-hub');
+        Hub         = require('cluster-hub'),
+        http        = require('node:http');
 
 var hub = new Hub();
 
@@ -14,8 +15,26 @@ const totalNumCPUs = require("os").cpus().length;
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
+const AXIOS_CLIENT_TIMEOUT = 3000;
+const AXIOS_CLIENT_KEEP_ALIVE_MSECS = 20000;
 
 const UPDATE_SHARD_MAP_HUB_MESSAGE = 'updateShardMap';
+
+
+http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
+
+const appServerAddresses = ['http://localhost:8080/'];
+let appServerAxiosClients = new Array(appServerAddresses.length);
+for (let i = 0; i < appServerAxiosClients.length; i++) {
+    appServerAxiosClients[i] = axios.create({
+        baseURL: appServerAddresses[i],
+        timeout: AXIOS_CLIENT_TIMEOUT,
+        httpAgent: new http.Agent({ 
+            keepAlive: true,
+            keepAliveMsecs: AXIOS_CLIENT_KEEP_ALIVE_MSECS
+        }),
+    });
+}
 
 
 if (cluster.isMaster) {
@@ -217,6 +236,31 @@ if (cluster.isMaster) {
             // always executed
         });
     });
+
+    app.post('/kv-request', async (req, res) => {
+        console.log(`Worker ${process.pid} serving kv-request`);
+
+        const { requestType, key, value } = req.body;
+
+        console.log(req.body);
+        
+        // TODO now using the only client but should use mapping calculations later
+        appServerAxiosClients[0].post('/kv-request', {
+            requestType: requestType,
+            key: key,
+            value: value
+        }).then(function (response) {
+            res.send(response.data);
+        })
+        .catch(function (error) {
+            console.log(error);
+            // For now just senjd generic 500 error to client
+            res.status(500).send({
+                message: 'Some error'
+            });
+        });
+    });
+    
 
     // Only directly requested by controller
     app.post('/update-shard-map', (req, res) => {
