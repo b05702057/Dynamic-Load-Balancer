@@ -174,9 +174,9 @@ if (cluster.isMaster) {
     });
 
     app.get('/user-info/:userId', (req, res) => {
-        console.log(`Worker ${process.pid} serving user-info`);
-
-        const { userId } = req.params; 
+        const { userId } = req.params;
+        console.log(`Worker ${process.pid} serving user-info with userID ${userId}`);
+         
         axios.get(`http://localhost:8080/user-info/${userId}`)
         .then(function (response) {
             // handle success

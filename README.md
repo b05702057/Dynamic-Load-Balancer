@@ -23,6 +23,15 @@ Run in load_testing folder:
     
 You can create other .yml config file e.g. for testing long computations and run those.
 
+Cutomized Artillery:
+
+    node user_generator.js 
+    
+Run customized users:
+
+    artillery run customized_test.yml  
+    
+
 
 Other resources:
 

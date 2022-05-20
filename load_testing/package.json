@@ -1,0 +1,17 @@
+{
+    "name": "dynamic_load_balancer_user_csv_generator",
+    "version": "1.0.0",
+    "description": "\"user csv generator for general purpose dynamic load balancer\"",
+    "main": "user_generator.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Zack Lee",
+    "license": "ISC",
+    "dependencies": {
+        "csv-parser": "^3.0.0",
+        "fs": "^0.0.1-security",
+        "js-yaml": "^4.1.0",
+        "probability-distributions": "^0.9.1"
+    }
+}
