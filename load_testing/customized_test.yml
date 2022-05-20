@@ -15,17 +15,17 @@ config:
       # path is relative to the location of the test script
       path: "users.csv"
       fields:
-        - "userId"
+        - "key"
+        - "requestType"
+        - "value"
       order: sequence
 
 scenarios:
-  - name: "Listing users"
+  - name: "Key value request"
     flow:
-      - get:
-          url: "/list-users"
-    weight: 3
-  - name: "Displaying user id 2"
-    flow:
-      - get:
-          url: "/user-info/{{ userId }}"
-    weight: 7
+      - post:
+          url: "/kv-request"
+          json:
+            key: "{{ key }}"
+            value: "{{ value }}"
+            requestType: "{{ requestType }}"

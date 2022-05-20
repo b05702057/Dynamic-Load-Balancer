@@ -32,21 +32,21 @@ function generatePhaseElements(phases, phase_idx, sample_lists, element_list) {
     return phase_idx + 1;
 }
 
-// make sure "put" is called before "get" for each key
+// make sure "set" is called before "get" for each key
 function addRequestTypes(element_list) {
     stored_keys = new Set();
     output_list = []
     element_list.forEach(element => {
-        // 0 stands for "put", and 1 stands for get
+        // 0 stands for "set", and 1 stands for get
         random = getRandomInt(2);
         if (random === 0) {
-            output_list.push(element + ",put");
+            output_list.push(element + ",set");
             stored_keys.add(element);
         } else {
             if (stored_keys.has(element)) {
                 output_list.push(element + ",get");
             } else {
-                output_list.push(element + ",put");
+                output_list.push(element + ",set");
             }
         }
     })
