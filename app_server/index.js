@@ -271,6 +271,11 @@ if (cluster.isMaster) {
         const { requestType, key, value } = req.body;
 
         console.log(req.body);
+
+        // TODO ENSURE KEY IS IN RESPONSIBLE SLICES AND UPDATE REQ COUNT SLICESINFO
+        // make sure that does not happen across any async point to avoid using locks.
+
+
         
         if (requestType === "get") {
             try {
@@ -278,7 +283,7 @@ if (cluster.isMaster) {
                 res.send(gotValue);
             } catch (err) {
                 res.status(500).send({
-                    message: 'Error: failed redis get'
+                    message: 'Error: failed while trying redis get'
                 });
             }
         } else if (requestType === "set") {
@@ -287,7 +292,7 @@ if (cluster.isMaster) {
                 res.send(ret);
             } catch (err) {
                 res.status(500).send({
-                    message: 'Error: failed redis set'
+                    message: 'Error: failed while trying redis set'
                 });
             }
 
@@ -299,7 +304,26 @@ if (cluster.isMaster) {
             });
         }
     });
-    
+
+    app.post('/redis-flushall', async (req, res) => {
+        console.log(`Worker ${process.pid} serving redis-flushall`);
+        try {
+            let flushRet = await redisClient.FLUSHALL();
+            console.log(flushRet);
+            if (flushRet === "OK") {
+                res.send("Successfuly flushed all redis");
+            } else {
+                res.status(500).send({
+                    message: 'Error flushing all redis'
+                });
+            }
+        } catch(err) {
+            console.log(err);
+            res.status(500).send({
+                message: 'Error flushing all redis'
+            });
+        }
+    });
 
     // Only directly requested by controller
     app.get('/get-load-info', (req, res) => {
