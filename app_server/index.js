@@ -17,6 +17,7 @@ const totalNumCPUs = require("os").cpus().length;
 const serverPort = 8080;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
 const REQUEST_LOAD_HUB_MESSAGE = 'requestLoad';
+const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
 
 if (cluster.isMaster) {
     console.log(`Total num cpus: ${totalNumCPUs}`);
@@ -67,8 +68,8 @@ if (cluster.isMaster) {
     // Aggregate slices request counts
     hub.on(REQUEST_LOAD_HUB_MESSAGE, function (data, sender, callback) {
         let all_promises = [];
-        for (let i = 0; i < workers.length; i++) {
-            all_promises.push(hubRequestWorkerRequestLoadPromise(hub, workers[i]));
+        for (const worker of workers) {
+            all_promises.push(hubRequestWorkerRequestLoadPromise(hub, worker));
         }
 
         let aggregatedSliceReqCounts = {};
@@ -76,9 +77,9 @@ if (cluster.isMaster) {
         Promise.all(all_promises)
         .then((allWorkersSliceReqCounts) => {
             for (const sliceReqCounts of allWorkersSliceReqCounts) {
-                for (const [slice, reqCount] of Object.entries(sliceReqCounts)) {
+                for (const [sliceSerialized, reqCount] of Object.entries(sliceReqCounts)) {
                     // Increment (or initialize to 0 then increment if not exist)
-                    aggregatedSliceReqCounts[slice] = (aggregatedSliceReqCounts[slice] || 0) + reqCount;
+                    aggregatedSliceReqCounts[sliceSerialized] = (aggregatedSliceReqCounts[sliceSerialized] || 0) + reqCount;
                 }
             }
 
@@ -89,18 +90,68 @@ if (cluster.isMaster) {
         });
     });
 
+    function hubRequestWorkerUpdateResponsibleSlicesPromise(hub, data, worker) {
+        return new Promise((resolve, reject) => {
+            hub.requestWorker(worker, UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE, data, (err, workerRes) => {
+                if (err) return reject(err);
+                resolve(workerRes);
+            });
+        })
+    }
+
+    hub.on(UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE, function (data, sender, callback) {
+        let all_promises = [];
+        for (const worker of workers) {
+            all_promises.push(hubRequestWorkerUpdateResponsibleSlicesPromise(hub, data, worker));
+        }
+        
+        Promise.all(all_promises)
+        .then((values) => {
+            callback(null, "success in updating responsible slices!");
+        })
+        .catch((err) => {
+            callback(err, "ERROR in updating responsible slices!");
+        });
+    });
+
 } else {
     console.log(`Worker with pid: ${process.pid} running`);
 
-    // testing
+    // TODO TESTING
     let dummy_slice = {start: 10, end: 20};
     // Maps slice to request count
     let slices_info = {};
-    slices_info[dummy_slice] = 200;
+    slices_info[JSON.stringify(dummy_slice)] = 200; // TODO TESTING
+    
+    let sorted_responsible_slices = [];
+
 
     hub.on(REQUEST_LOAD_HUB_MESSAGE, function (data, sender, callback) {
         callback(null, slices_info);
     });
+
+    hub.on(UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE, function (data, sender, callback) {
+        let new_slices_info = {};
+        let new_sorted_responsible_slices = [];
+        // Initialize to 0 and push to sorted_responsible_slices array
+        for (const slice of data['slicesArray']) {
+            new_slices_info[JSON.stringify(slice)] = 0;
+            new_sorted_responsible_slices.push(slice);
+        };
+
+        new_sorted_responsible_slices.sort((slice_a, slice_b) => {slice_a.start - slice_b.start});
+
+        // Reset data structures
+        slices_info = new_slices_info;
+        sorted_responsible_slices = new_sorted_responsible_slices;
+
+        console.log(`Worker ${process.pid} updated slices_info and sorted_responsible_slices`);
+        // console.log(slices_info);
+        // console.log(sorted_responsible_slices);
+
+        callback(null, "Worker successfully updated responsible slices");
+    });
+
 
     const app = express();
     
@@ -193,6 +244,7 @@ if (cluster.isMaster) {
     });
 
 
+    // Only directly requested by controller
     app.get('/get-load-info', (req, res) => {
         console.log(`Worker ${process.pid} serving get-load`);
 
@@ -203,8 +255,12 @@ if (cluster.isMaster) {
             if (err !== null) {
                 console.log('Error requesting load');
                 console.log(err);
+                // Error code 500
+                res.status(500).send({
+                    message: 'Error requesting load'
+                });
             } else {
-                console.log('Got response from master: ');
+                console.log('Got response from master for getting request load:');
                 console.log(masterRes);
                 // Send back load
                 res.send(masterRes);
@@ -214,8 +270,38 @@ if (cluster.isMaster) {
         // We wont need this because by default we load balance on request rate.
         cpu.usage()
             .then(cpuPercentage => {
-                console.log(`Dummy: cpu % is ${cpuPercentage}`);
+                console.log(`Current cpu usage % is ${cpuPercentage}`);
             });
+    });
+
+    // Only directly requested by controller
+    app.post('/update-responsible-slices', (req, res) => {
+        console.log(`Worker ${process.pid} serving /update-responsible-slices`);
+
+        // Expects slicesArray to be array of objects (not serialized object strings)
+        const { slicesArray } = req.body;
+
+        // Data for hub communication
+        const data = {
+            slicesArray: slicesArray
+        };
+
+        // Communicate with master to tell all worker to update slices
+        hub.requestMaster(UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE, data, (err, masterRes) => {
+            if (err !== null) {
+                console.log('Error updating responsible slices');
+                console.log(err);
+                // Error code 500
+                res.status(500).send({
+                    message: 'Error updating responsible slices'
+                });
+            } else {
+                console.log('Got response from master for updating responsible slices:');
+                console.log(masterRes);
+                // Simply send success message (controller doesn't need data) for this request
+                res.send(masterRes);
+            }
+        });
     });
     
     app.get('*', (req, res) => {

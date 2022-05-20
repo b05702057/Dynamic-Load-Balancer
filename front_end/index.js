@@ -68,8 +68,8 @@ if (cluster.isMaster) {
 
     hub.on(UPDATE_SHARD_MAP_HUB_MESSAGE, function (data, sender, callback) {
         let all_promises = [];
-        for (let i = 0; i < workers.length; i++) {
-            all_promises.push(hubRequestWorkerUpdateShardMapPromise(hub, data, workers[i]));
+        for (const worker of workers) {
+            all_promises.push(hubRequestWorkerUpdateShardMapPromise(hub, data, worker));
         }
         
         Promise.all(all_promises)
@@ -218,6 +218,7 @@ if (cluster.isMaster) {
         });
     });
 
+    // Only directly requested by controller
     app.post('/update-shard-map', (req, res) => {
         console.log(`Worker ${process.pid} serving update-shard-map`);
 

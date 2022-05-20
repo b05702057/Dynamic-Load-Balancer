@@ -15,9 +15,18 @@ let appServerAxiosClients = new Array(appServerAddresses.length);
 
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
-// Maps slice to request count
+// Maps slice to request count.
 let slices_info = {};
-let sorted_slice_to_server = ['test_1', 'test_2'];
+let sorted_slice_to_server = [
+    {
+        slice: {start: 10, end: 20},
+        serverIndex: 0,
+    },
+    {
+        slice: {start: 20, end: 40},
+        serverIndex: 0,
+    },
+]; // TODO TESTING VALUES
 
 // Initialize
 function initialize() {
@@ -67,9 +76,9 @@ function getLoadFromAppServers() {
             // handle success
             console.log(`Successfully got load from AS at index ${server_idx}:`);
             console.log(response.data);
-            for (const [slice, reqCount] of Object.entries(response.data)) {
+            for (const [sliceSerialized, reqCount] of Object.entries(response.data)) {
                 // Increment (or initialize to 0 then increment if not exist)
-                new_slices_info[slice] = (new_slices_info[slice] || 0) + reqCount;
+                new_slices_info[sliceSerialized] = (new_slices_info[sliceSerialized] || 0) + reqCount;
             }
         })
         .catch(function (error) {
@@ -88,21 +97,26 @@ function getLoadFromAppServers() {
 // Then can add rejection for retry in back ends if strong consistency is neede
 function sendUpdatedMappings() {
 
-    // // TODO wait for max heap implemenation?
-    // for (const [server_idx, serverClient] of appServerAxiosClients.entries()) {
-    //     serverClient
-    //     .post('/update-server-slices', server_slices[server_idx])
-    //     .then(function (response) {
-    //         // handle success
-    //         console.log(`Successfully updated shard map for FE at index ${server_idx}:`);
-    //         console.log(response.data);
-    //     })
-    //     .catch(function (error) {
-    //         // handle error
-    //         console.log(`Error updating shard map for FE at index ${server_idx}`);
-    //         console.log(error);
-    //     });
-    // }
+    let dummySlicesArray = [{start: 100, end: 200}];  // TODO testing
+    console.log(dummySlicesArray);
+    
+    // TODO wait for max heap implemenation?
+    for (const [server_idx, serverClient] of appServerAxiosClients.entries()) {
+        serverClient
+        .post('/update-responsible-slices', {
+            slicesArray: dummySlicesArray // TODO server_slices[server_idx]
+        })
+        .then(function (response) {
+            // handle success
+            console.log(`Successfully updated responsible slices for server ${server_idx}:`);
+            console.log(response.data);
+        })
+        .catch(function (error) {
+            // handle error
+            console.log(`Error updating responsible slices for server ${server_idx}`);
+            console.log(error);
+        });
+    }
 
     for (const [frontEndIdx, frontEndClient] of frontEndAxiosClients.entries()) {
         frontEndClient
