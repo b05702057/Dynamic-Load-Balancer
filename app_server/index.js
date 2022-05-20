@@ -4,11 +4,12 @@ const   express     = require('express'),
         osu         = require('node-os-utils'),
         Hub         = require('cluster-hub')
         util        = require('util');
+        redis       = require('redis');
+    
+var createRedisClient = redis.createClient;
 
 var hub = new Hub();
-
 var cpu = osu.cpu;
-
 
 const cluster = require('cluster');
 
@@ -18,6 +19,9 @@ const serverPort = 8080;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
 const REQUEST_LOAD_HUB_MESSAGE = 'requestLoad';
 const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
+
+const REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 10000;
+const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 10000;
 
 if (cluster.isMaster) {
     console.log(`Total num cpus: ${totalNumCPUs}`);
@@ -118,36 +122,53 @@ if (cluster.isMaster) {
     console.log(`Worker with pid: ${process.pid} running`);
 
     // TODO TESTING
-    let dummy_slice = {start: 10, end: 20};
+    let dummySlice = {start: 10, end: 20};
     // Maps slice to request count
-    let slices_info = {};
-    slices_info[JSON.stringify(dummy_slice)] = 200; // TODO TESTING
+    let slicesInfo = {};
+    slicesInfo[JSON.stringify(dummySlice)] = 200; // TODO TESTING
     
-    let sorted_responsible_slices = [];
+    let sortedResponsibleSlices = [];
 
+
+    // Create and connect redis client
+    const redisClient = createRedisClient({
+        socket: {
+            keepAlive: REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS,
+            connectTimeout: REDIS_CONNECTION_TIMEOUT_MILLISECONDS,
+        }
+    });
+
+    redisClient.on('error', (err) => console.log('Redis Client Error', err));
+    redisClient.connect().then((data) => {
+        console.log("Successfuly connected redis client");
+    }).catch((err) => {
+        console.log("Error connecting to redis client");
+        console.log(err);
+    });
+  
 
     hub.on(REQUEST_LOAD_HUB_MESSAGE, function (data, sender, callback) {
-        callback(null, slices_info);
+        callback(null, slicesInfo);
     });
 
     hub.on(UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE, function (data, sender, callback) {
-        let new_slices_info = {};
-        let new_sorted_responsible_slices = [];
-        // Initialize to 0 and push to sorted_responsible_slices array
+        let newSlicesInfo = {};
+        let newSortedResponsibleSlices = [];
+        // Initialize to 0 and push to sortedResponsibleSlices array
         for (const slice of data['slicesArray']) {
-            new_slices_info[JSON.stringify(slice)] = 0;
-            new_sorted_responsible_slices.push(slice);
+            newSlicesInfo[JSON.stringify(slice)] = 0;
+            newSortedResponsibleSlices.push(slice);
         };
 
-        new_sorted_responsible_slices.sort((slice_a, slice_b) => {slice_a.start - slice_b.start});
+        newSortedResponsibleSlices.sort((slice_a, slice_b) => {slice_a.start - slice_b.start});
 
         // Reset data structures
-        slices_info = new_slices_info;
-        sorted_responsible_slices = new_sorted_responsible_slices;
+        slicesInfo = newSlicesInfo;
+        sortedResponsibleSlices = newSortedResponsibleSlices;
 
-        console.log(`Worker ${process.pid} updated slices_info and sorted_responsible_slices`);
-        // console.log(slices_info);
-        // console.log(sorted_responsible_slices);
+        console.log(`Worker ${process.pid} updated slicesInfo and sortedResponsibleSlices`);
+        // console.log(slicesInfo);
+        // console.log(sortedResponsibleSlices);
 
         callback(null, "Worker successfully updated responsible slices");
     });
@@ -243,6 +264,42 @@ if (cluster.isMaster) {
         res.send({sum});
     });
 
+
+    app.post('/kv-request', async (req, res) => {
+        console.log(`Worker ${process.pid} serving kv-request`);
+
+        const { requestType, key, value } = req.body;
+
+        console.log(req.body);
+        
+        if (requestType === "get") {
+            try {
+                const gotValue = await redisClient.get(key);
+                res.send(gotValue);
+            } catch (err) {
+                res.status(500).send({
+                    message: 'Error: failed redis get'
+                });
+            }
+        } else if (requestType === "set") {
+            try {
+                let ret = await redisClient.set(key, value);
+                res.send(ret);
+            } catch (err) {
+                res.status(500).send({
+                    message: 'Error: failed redis set'
+                });
+            }
+
+        } else {
+            console.log("ERROR: Bad client request: invalid requestType");
+            // Error code 400
+            res.status(400).send({
+                message: 'Error: invalid requestType'
+            });
+        }
+    });
+    
 
     // Only directly requested by controller
     app.get('/get-load-info', (req, res) => {

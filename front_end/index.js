@@ -84,12 +84,12 @@ if (cluster.isMaster) {
     console.log(`Worker with pid: ${process.pid} running`);
 
     // Array of slice, server_id pair object. i.e "shard map"
-    let sorted_slice_to_server = [];
+    let sortedSliceToServer = [];
 
     // Update shard map
     hub.on(UPDATE_SHARD_MAP_HUB_MESSAGE, function (data, sender, callback) {
-        sorted_slice_to_server = data;
-        console.log(`Worker ${process.pid} updated sorted_slice_to_server: ` + JSON.stringify(sorted_slice_to_server));
+        sortedSliceToServer = data;
+        console.log(`Worker ${process.pid} updated sortedSliceToServer: ` + JSON.stringify(sortedSliceToServer));
         
         callback(null, "worker updated!");
     });
@@ -222,10 +222,10 @@ if (cluster.isMaster) {
     app.post('/update-shard-map', (req, res) => {
         console.log(`Worker ${process.pid} serving update-shard-map`);
 
-        const { sorted_slice_to_server } =  req.body;
+        const { sortedSliceToServer } =  req.body;
         
         // Todo update shard maps of all processes
-        hub.requestMaster(UPDATE_SHARD_MAP_HUB_MESSAGE, sorted_slice_to_server, (err, masterRes) => {
+        hub.requestMaster(UPDATE_SHARD_MAP_HUB_MESSAGE, sortedSliceToServer, (err, masterRes) => {
             if (err !== null) {
                 console.log('Error updating shard Map');
                 console.log(err);

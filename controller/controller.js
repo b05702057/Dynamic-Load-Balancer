@@ -16,8 +16,8 @@ let appServerAxiosClients = new Array(appServerAddresses.length);
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
 // Maps slice to request count.
-let slices_info = {};
-let sorted_slice_to_server = [
+let slicesInfo = {};
+let sortedSliceToServer = [
     {
         slice: {start: 10, end: 20},
         serverIndex: 0,
@@ -56,7 +56,7 @@ function initialize() {
 }
 
 function periodicMonitoringAndLoadBalancing() {
-    // Populates slices_info
+    // Populates slicesInfo
     getLoadFromAppServers();
 
     // Do algorithm here
@@ -67,53 +67,62 @@ function periodicMonitoringAndLoadBalancing() {
 }
 
 function getLoadFromAppServers() {
-    let new_slices_info = {};
+    let newSlicesInfo = {};
 
-    for (const [server_idx, appServerClient] of appServerAxiosClients.entries()) { 
+    for (const [serverIdx, appServerClient] of appServerAxiosClients.entries()) { 
         appServerClient
         .get('/get-load-info')
         .then(function (response) {
             // handle success
-            console.log(`Successfully got load from AS at index ${server_idx}:`);
+            console.log(`Successfully got load from AS at index ${serverIdx}:`);
             console.log(response.data);
             for (const [sliceSerialized, reqCount] of Object.entries(response.data)) {
                 // Increment (or initialize to 0 then increment if not exist)
-                new_slices_info[sliceSerialized] = (new_slices_info[sliceSerialized] || 0) + reqCount;
+                newSlicesInfo[sliceSerialized] = (newSlicesInfo[sliceSerialized] || 0) + reqCount;
             }
         })
         .catch(function (error) {
             // handle error
-            console.log(`Error getting load from AS at index ${server_idx}`);
+            console.log(`Error getting load from AS at index ${serverIdx}`);
             console.log(error);
         });
     }
 
-    // Update slices_info
-    slices_info = new_slices_info;
-    console.log('New slices_info is:' + JSON.stringify(slices_info));
+    // Update slicesInfo
+    slicesInfo = newSlicesInfo;
+    console.log('New slicesInfo is:' + JSON.stringify(slicesInfo));
 }
 
 // Can start with sending directly to front end
 // Then can add rejection for retry in back ends if strong consistency is neede
 function sendUpdatedMappings() {
-
-    let dummySlicesArray = [{start: 100, end: 200}, {start: 201, end: 400}];  // TODO testing
-    console.log(dummySlicesArray);
+    // Associative array of slices array (each elem is an array) the server at that idx is responsible for
+    let serverToSlicesArray = new Array(appServerAddresses.length);
+    
+    // Initialize each nested array
+    for (let i = 0; i < appServerAddresses.length; ++i) {
+        serverToSlicesArray[i] = [];
+    }
+    
+    // Populate appropriately from going through sortedSliceToServer
+    for (const entry of sortedSliceToServer) {
+        serverToSlicesArray[entry.serverIndex].push(entry.slice);
+    }
     
     // TODO wait for max heap implemenation?
-    for (const [server_idx, serverClient] of appServerAxiosClients.entries()) {
+    for (const [serverIdx, serverClient] of appServerAxiosClients.entries()) {
         serverClient
         .post('/update-responsible-slices', {
-            slicesArray: dummySlicesArray // TODO server_slices[server_idx]
+            slicesArray: serverToSlicesArray[serverIdx]
         })
         .then(function (response) {
             // handle success
-            console.log(`Successfully updated responsible slices for server ${server_idx}:`);
+            console.log(`Successfully updated responsible slices for server ${serverIdx}:`);
             console.log(response.data);
         })
         .catch(function (error) {
             // handle error
-            console.log(`Error updating responsible slices for server ${server_idx}`);
+            console.log(`Error updating responsible slices for server ${serverIdx}`);
             console.log(error);
         });
     }
@@ -121,7 +130,7 @@ function sendUpdatedMappings() {
     for (const [frontEndIdx, frontEndClient] of frontEndAxiosClients.entries()) {
         frontEndClient
         .post('/update-shard-map', {
-            sorted_slice_to_server: sorted_slice_to_server
+            sortedSliceToServer: sortedSliceToServer
         })
         .then(function (response) {
             // handle success
