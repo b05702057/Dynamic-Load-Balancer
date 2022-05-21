@@ -16,6 +16,9 @@ const KEYSPACE_MAX = 4294967295;
 const KEY_CHURN_FRACTION_LIMIT = 0.3; // TODO testing
 const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX * KEY_CHURN_FRACTION_LIMIT); 
 
+const HOT_SLICE_THRESHOLD_RATIO_TO_AVG = 1.5; 
+const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 0.5;
+
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
 const AXIOS_CLIENT_KEEP_ALIVE_MSECS = 20000;
@@ -515,8 +518,8 @@ function updateVars() {
 
     calAvgReq();
 
-    coldSliceTres = avgReqPerSlice * 0.5; 
-    hotSliceThres = avgReqPerSlice * 2; 
+    coldSliceTres = avgReqPerSlice * COLD_SLICE_THRESHOLD_RATIO_TO_AVG; 
+    hotSliceThres = avgReqPerSlice * HOT_SLICE_THRESHOLD_RATIO_TO_AVG; 
 
     keyChurn = 0; 
 }
