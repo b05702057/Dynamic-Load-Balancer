@@ -31,6 +31,9 @@ Run customized users:
 
     artillery run customized_test.yml  
     
+download local DynamoDB here:
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html#DynamoDBLocal.DownloadingAndRunning.title
+
 DynamoDB:
 
     cd DB
@@ -48,6 +51,8 @@ DynamoDB:
     Default output format: 
     
 Start DynamoDB:
+
+    cd dynamodb_local_latest
 
     java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -port 8888
     
