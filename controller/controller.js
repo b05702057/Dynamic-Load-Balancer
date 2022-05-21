@@ -2,6 +2,11 @@ const axios = require('axios');
 const http = require('node:http');
 const { Heap } = require('heap-js'); 
 const fs = require('fs');
+const {
+    setIntervalAsync,
+    clearIntervalAsync
+} = require('set-interval-async/dynamic');
+
 
 // Don't add whitespace here, rely on replace() regex for that
 const MACHINE_ADDRESSES_SEPARATOR = ",";
@@ -119,10 +124,15 @@ function initialize() {
 
 }
 
-function periodicMonitoringAndLoadBalancing() {
+async function periodicMonitoringAndLoadBalancing() {
     // Populates slicesInfo
-    getLoadFromAppServers();
+    await getLoadFromAppServers();
     
+    console.log("BEFORE ALG SLICES INFO:");
+    console.log(slicesInfo);
+    console.log("BEFORE ALG SORTEDSLICETOSERVER:");
+    console.log(sortedSliceToServer);
+
     // update global variables 
     updateVars(); 
 
@@ -135,36 +145,45 @@ function periodicMonitoringAndLoadBalancing() {
     move(); 
     split();  
 
+    console.log("AFTER ALG SLICES INFO:");
+    console.log(slicesInfo);
+    console.log("AFTER ALG SORTEDSLICETOSERVER:");
+    console.log(sortedSliceToServer);
+
     sendUpdatedMappings(); 
 
 }
 
 // Populates slicesInfo with new load info
-function getLoadFromAppServers() {
+async function getLoadFromAppServers() {
     let newSlicesInfo = {};
 
-    for (const [serverIdx, appServerClient] of appServerAxiosClients.entries()) { 
-        appServerClient
-        .get('/get-load-info')
-        .then(function (response) {
-            // handle success
+    let all_promises = [];
+
+    for (const appServerClient of appServerAxiosClients) { 
+        all_promises.push(appServerClient.get('/get-load-info'));
+    }
+
+    Promise.all(all_promises)
+    .then((allResponses) => {
+        // handle success
+        for (const [serverIdx, response] of allResponses.entries()) {
             console.log(`Successfully got load from AS at index ${serverIdx}:`);
             console.log(response.data);
             for (const [sliceSerialized, reqCount] of Object.entries(response.data)) {
                 // Increment (or initialize to 0 then increment if not exist)
                 newSlicesInfo[sliceSerialized] = (newSlicesInfo[sliceSerialized] || 0) + reqCount;
             }
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(`Error getting load from AS at index ${serverIdx}`);
-            console.log(error);
-        });
-    }
+        }
 
-    // Update slicesInfo
-    slicesInfo = newSlicesInfo;
-    console.log('New slicesInfo is:' + JSON.stringify(slicesInfo));
+        // Update slicesInfo
+        slicesInfo = newSlicesInfo;
+        console.log('New slicesInfo is:' + JSON.stringify(slicesInfo));
+    })
+    .catch((err) => {
+        console.log('Error getting load from Some server');
+        console.log(err);
+    });
 }
 
 // Can start with sending directly to front end
@@ -476,4 +495,4 @@ function updateVars() {
 
 
 initialize();
-setInterval(periodicMonitoringAndLoadBalancing, LOAD_BALANCING_INTERVAL_MILLISECONDS);
+setIntervalAsync(periodicMonitoringAndLoadBalancing, LOAD_BALANCING_INTERVAL_MILLISECONDS);
