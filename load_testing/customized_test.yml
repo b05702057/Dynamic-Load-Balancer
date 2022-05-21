@@ -6,18 +6,18 @@ config:
       name: Warm up
     - duration: 20
       arrivalRate: 5
-      rampTo: 100
+      rampTo: 50
       name: Ramp up load
     - duration: 20
-      arrivalRate: 100
+      arrivalRate: 50
       name: Sustained load
   payload:
       # path is relative to the location of the test script
       path: "users.csv"
       fields:
         - "key"
-        - "requestType"
         - "value"
+        - "requestType"
       order: sequence
 
 scenarios:
