@@ -177,7 +177,10 @@ while (keys.size < key_num) {
 keys = Array.from(keys);
 
 // define load patterns
-sample_lists = generateSampleLists(key_num, NORMAL, UNIFORM, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
+// sample_lists = generateSampleLists(key_num, NORMAL, UNIFORM, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
+sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
+// // 2 peak loads shifting right
+// sample_lists = generateSampleLists(20, [10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));

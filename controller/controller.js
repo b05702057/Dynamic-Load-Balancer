@@ -7,6 +7,13 @@ const {
     clearIntervalAsync
 } = require('set-interval-async/dynamic');
 
+const SimpleNodeLogger = require('simple-node-logger'),
+	opts = {
+		logFilePath:'./metrics_log.txt',
+		timestampFormat:'YYYY-MM-DD HH:mm:ss.SSS'
+	},
+logger = SimpleNodeLogger.createSimpleLogger( opts );
+
 
 // Don't add whitespace here, rely on replace() regex for that
 const MACHINE_ADDRESSES_SEPARATOR = ",";
@@ -16,8 +23,10 @@ const KEYSPACE_MAX = 4294967295;
 const KEY_CHURN_FRACTION_LIMIT = 0.3; // TODO testing
 const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX * KEY_CHURN_FRACTION_LIMIT); 
 
-const HOT_SLICE_THRESHOLD_RATIO_TO_AVG = 1.5; 
+const HOT_SLICE_THRESHOLD_RATIO_TO_AVG = 2; 
 const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 0.5;
+
+const MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO = 1.25;
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
@@ -76,21 +85,40 @@ const compareLoadMinH = (a, b) => {
 }
 
 // sortedSliceToServer: [{slice, serverIndex}]
+// let sortedSliceToServer = [
+//     {
+//         slice: {start: 0, end: 10},
+//         serverIndex: 0,
+//     },
+//     {
+//         slice: {start: 11, end: 15},
+//         serverIndex: 1,
+//     },
+//     {
+//         slice: {start: 16, end: 20},
+//         serverIndex: 1,
+//     },
+//     {
+//         slice: {start: 21, end: KEYSPACE_MAX},
+//         serverIndex: 0,
+//     },
+
+// ]; // TODO TESTING VALUES
 let sortedSliceToServer = [
     {
-        slice: {start: 0, end: 10},
+        slice: {start: 0, end: Math.floor(KEYSPACE_MAX / 4)},
         serverIndex: 0,
     },
     {
-        slice: {start: 11, end: 15},
+        slice: {start: Math.floor(KEYSPACE_MAX / 4) + 1, end: Math.floor(2 * KEYSPACE_MAX / 4)},
         serverIndex: 1,
     },
     {
-        slice: {start: 16, end: 20},
+        slice: {start: Math.floor(2 * KEYSPACE_MAX / 4) + 1, end: Math.floor(3 * KEYSPACE_MAX / 4)},
         serverIndex: 1,
     },
     {
-        slice: {start: 21, end: KEYSPACE_MAX},
+        slice: {start: Math.floor(3 * KEYSPACE_MAX / 4) + 1, end: KEYSPACE_MAX},
         serverIndex: 0,
     },
 
@@ -377,6 +405,8 @@ function merge() {
                 }
             }
 
+            console.log("MERGING!");
+
             // update the second slice range in sortedSliceToServer
             sortedSliceToServer[coldSlices[i].index].slice = mergedSlice; 
             // remove the first slice in sortedSliceToServer array 
@@ -416,7 +446,12 @@ function move() {
 
     let keyChurn = 0;
     let prevColdest = new Set(); 
-    while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > 1.25 ) {
+
+    const maxImbalance = maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load;
+    // Log max imbalance
+    logger.info('Max imbalance: ' + maxImbalance.toString());
+
+    while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO ) {
         // get hottest and coldest server
         let hottestServerIndex = maxHeapServerLoad.peek().serverIndex; 
         let coldestServerIndex = minHeapServerLoad.peek().serverIndex;  

@@ -119,7 +119,7 @@ if (cluster.isMaster) {
         });
     });
 } else {
-    console.log(`Worker with pid: ${process.pid} running`);
+    console.log(`Front end worker with pid: ${process.pid} running`);
 
     // Array of slice, server_id pair object. i.e "shard map"
     let sortedSliceToServer = [];
@@ -281,7 +281,7 @@ if (cluster.isMaster) {
     });
 
     app.post('/kv-request', async (req, res) => {
-        console.log(`Worker ${process.pid} serving kv-request`);
+        console.log(`Front end worker ${process.pid} serving kv-request`);
 
         const { requestType, key, value } = req.body;
 
