@@ -159,6 +159,14 @@ function generatePhasePattern(key_num, distribution) {
     return sample_list;
 }
 
+function generateSampleLists(key_num, ...distributions) {
+    var sample_lists = []
+    distributions.forEach(distribution => {
+        sample_lists.push(generatePhasePattern(key_num, distribution));
+    })
+    return sample_lists;
+}
+
 // generate keys
 var keys = new Set();
 const key_num = 10;
@@ -169,11 +177,7 @@ while (keys.size < key_num) {
 keys = Array.from(keys);
 
 // define load patterns
-var element_list = []; // output
-var sample_list1 = generatePhasePattern(key_num, NORMAL); // normal distribution
-var sample_list2 = generatePhasePattern(key_num, UNIFORM); // uniform distribution
-var sample_list3 = generatePhasePattern(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]); // The third key is hot.
-var sample_lists = [sample_list1, sample_list2, sample_list3]; // modify this list to customize the load for each phase
+sample_lists = generateSampleLists(key_num, NORMAL, UNIFORM, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
@@ -181,6 +185,7 @@ var phases = doc.config.phases;
 var phase_idx = 0;
 
 // generate elements for each phase
+var element_list = []; // output
 phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 0
 phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 1
 phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 2
