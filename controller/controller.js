@@ -36,7 +36,6 @@ try {
 }
 
 
-
 let frontEndAxiosClients = new Array(frontEndAddresses.length);
 let appServerAxiosClients = new Array(appServerAddresses.length);
 
@@ -64,13 +63,22 @@ const compareLoadMinH = (a, b) => {
 // sortedSliceToServer: [{slice, serverIndex}]
 let sortedSliceToServer = [
     {
-        slice: {start: 0, end: 20},
+        slice: {start: 0, end: 10},
         serverIndex: 0,
+    },
+    {
+        slice: {start: 11, end: 15},
+        serverIndex: 1,
+    },
+    {
+        slice: {start: 16, end: 20},
+        serverIndex: 1,
     },
     {
         slice: {start: 21, end: KEYSPACE_MAX},
         serverIndex: 0,
     },
+
 ]; // TODO TESTING VALUES
 // slicesInfo: {Slice: reqNum}
 let slicesInfo = {};

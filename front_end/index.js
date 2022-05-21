@@ -289,8 +289,9 @@ if (cluster.isMaster) {
 
         // Find which server to route to by hashing key and checking shard map (sortedSliceToServer)
 
-        // hash32 returns a number which is an unsigned 32 bit integer
-        const hashedKeyInt = farmhash.hash32(key);
+        // fingerprint32 returns a number which is an unsigned 32 bit integer. same result on all
+        // platforms unlike hash32
+        const hashedKeyInt = farmhash.fingerprint32(key);
         const sliceAndServerObj = findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt);
 
         let appServerIndexToRoute = null;

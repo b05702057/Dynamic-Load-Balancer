@@ -313,7 +313,7 @@ if (cluster.isMaster) {
 
         // Check that this server is indeed responsible for the slice containing the
         // hashed key
-        const hashedKeyInt = farmhash.hash32(key);
+        const hashedKeyInt = farmhash.fingerprint32(key);
         const slice = findSliceForKey(sortedResponsibleSlices, hashedKeyInt);
         if (slice === null) {
             // Use code 410 for this
