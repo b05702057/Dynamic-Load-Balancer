@@ -192,7 +192,6 @@ sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
 var phases = doc.config.phases;
-var phase_idx = 0;
 
 // generate elements for each phase
 var element_list = []; // output
