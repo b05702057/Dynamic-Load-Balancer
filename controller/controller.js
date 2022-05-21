@@ -1,11 +1,18 @@
 const axios = require('axios');
 const http = require('node:http');
+const { Heap } = require('heap-js'); 
 
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
 const AXIOS_CLIENT_KEEP_ALIVE_MSECS = 20000;
+const KEY_CHURN_LIMIT = 2000; 
+const SLICES_LIMIT = 100; 
 
+// 2^32 - 1
+const KEYSPACE_MAX = 4294967295;
+
+http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
 const frontEndAddresses = ['http://localhost:3000/'];
 const appServerAddresses = ['http://localhost:8080/'];
@@ -13,13 +20,28 @@ const appServerAddresses = ['http://localhost:8080/'];
 let frontEndAxiosClients = new Array(frontEndAddresses.length);
 let appServerAxiosClients = new Array(appServerAddresses.length);
 
-// 2^32 - 1
-const KEYSPACE_MAX = 4294967295;
+const compareReqMaxH = (a, b) => {
+    if (a.reqNum >= b.reqNum) {
+        return -1;
+    }
+    return 1; 
+};
 
-http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
+const compareLoadMaxH = (a, b) => {
+    if (a.load >= b.load) {
+        return -1;
+    }
+    return 1;
+}
 
-// Maps slice to request count.
-let slicesInfo = {};
+const compareLoadMinH = (a, b) => {
+    if(a.load > b.load) {
+        return 1;
+    }
+    return -1; 
+}
+
+// sortedSliceToServer: [{slice, serverIndex}]
 let sortedSliceToServer = [
     {
         slice: {start: 0, end: 20},
@@ -30,6 +52,17 @@ let sortedSliceToServer = [
         serverIndex: 0,
     },
 ]; // TODO TESTING VALUES
+// slicesInfo: {Slice: reqNum}
+let slicesInfo = {};
+// appServersInfo: [load]
+let appServersInfo = []; 
+// serverSlices: [max_heap<reqNum, Slice>]
+let serverSlices = []; 
+
+let avgReqPerSlice = 0; 
+let coldSliceTres = 0; 
+let hotSliceThres = 0; 
+
 
 // Initialize
 function initialize() {
@@ -61,14 +94,24 @@ function initialize() {
 function periodicMonitoringAndLoadBalancing() {
     // Populates slicesInfo
     getLoadFromAppServers();
+    
+    // update global variables 
+    updateVars(); 
 
-    // Do algorithm here
+    calServerLoad(); 
+    merge();
 
+    // generate serverSlices and serversInfo with new data after merge
+    genServerSlices();
+
+    move(); 
+    split();  
 
     sendUpdatedMappings(); 
 
 }
 
+// Populates slicesInfo with new load info
 function getLoadFromAppServers() {
     let newSlicesInfo = {};
 
@@ -112,7 +155,6 @@ function sendUpdatedMappings() {
         serverToSlicesArray[entry.serverIndex].push(entry.slice);
     }
     
-    // TODO wait for max heap implemenation?
     for (const [serverIdx, serverClient] of appServerAxiosClients.entries()) {
         serverClient
         .post('/update-responsible-slices', {
@@ -147,6 +189,263 @@ function sendUpdatedMappings() {
         });
     }
 }
+
+
+function genServerSlices(){
+    let newServerSlices = [];  
+    
+    for(let i = 0; i < appServerAddresses.length; i++){
+        const maxHeap = new Heap(compareReqMaxH); 
+        newServerSlices.push(maxHeap);
+    }
+
+    for(let i = 0; i < sortedSliceToServer.length; i++){
+        let slice = sortedSliceToServer[i].slice; 
+        let serverIndex = sortedSliceToServer[i].serverIndex;
+        newServerSlices[serverIndex].push({reqNum: slicesInfo[JSON.stringify(slice)], slice: slice});  
+    }
+
+    serverSlices = newServerSlices;
+    
+}
+
+function calServerLoad() {
+    let newServersInfo = [];
+     
+    for(let i = 0; i < appServerAddresses.length; i++){
+        newServersInfo.push(0); 
+    }
+
+    for(let i = 0; i < sortedSliceToServer.length; i++){
+        let slice = sortedSliceToServer[i].slice; 
+        let serverIndex = sortedSliceToServer[i].serverIndex;
+        newServersInfo[serverIndex] += slicesInfo[JSON.stringify(slice)];  
+    }
+
+    appServersInfo = newServersInfo; 
+}
+
+function calAvgReq() {
+    let totalReq = 0; 
+
+    for(let k in slicesInfo){
+        totalReq += slicesInfo[k]; 
+    }
+    avgReqPerSlice = Math.ceil(totalReq / sortedSliceToServer.length);
+}
+
+function calKeyChurn(slice) {
+    return (slice.end > slice.start)? slice.end - slice.start : 0; 
+}
+
+function merge() {
+    // coldSlices: {index, reqNum}
+    let coldSlices = []
+
+    // get all cold slices
+    for (let i = 0; i < sortedSliceToServer.length; i++){
+        let slice = JSON.parse(JSON.stringify(sortedSliceToServer[i].slice)); 
+        if (slicesInfo[JSON.stringify(slice)] < coldSliceTres){
+
+            // get index in sortedSliceToServer to find adjacent slices
+            // req_num is for checking if we should do more than one merge
+            coldSlices.push({index: i, reqNum: slicesInfo[JSON.stringify(slice)], slice: slice}); 
+        }
+    }
+
+    let slicesIndexToRemove = new Set(); 
+
+    // merge continuous cold slices
+    // TODO: constraining for one merge or allowing multiple slices merge
+    for (let i = 0; i < coldSlices.length; i++) {
+        if(i > 0 && ((coldSlices[i-1].index+1) == coldSlices[i].index) && coldSlices[i].reqNum < coldSliceTres){
+            let firstSlice = JSON.parse(JSON.stringify(coldSlices[i-1].slice)); 
+            let secondSlice = JSON.parse(JSON.stringify(coldSlices[i].slice)); 
+
+            // get servers the two slices are at
+            let firstServerIndex = sortedSliceToServer[coldSlices[i-1].index].serverIndex; 
+            let secondServerIndex = sortedSliceToServer[coldSlices[i].index].serverIndex; 
+            
+            // merge two slices
+            let mergedSlice = {start: firstSlice.start, end: secondSlice.end}; 
+            let mergedReq = slicesInfo[JSON.stringify(firstSlice)] + slicesInfo[JSON.stringify(secondSlice)];  
+
+            // add keyChurn if two slices are on different servers
+            // and move request load
+            if (firstServerIndex != secondServerIndex) {
+                // If first server has lower load, change the second slice's serverIndex to first slice's serverIndex
+                // and record the movedSlice for calculating keyChurn
+                if(appServersInfo[firstServerIndex] < appServersInfo[secondServerIndex]){
+
+                    keyChurn += calKeyChurn(secondSlice); 
+                    if(keyChurn > KEY_CHURN_LIMIT){
+                        break;
+                    }
+
+                    // merged slice move into the first server
+                    sortedSliceToServer[coldSlices[i].index].serverIndex = firstServerIndex; 
+                    // update server's load
+                    appServersInfo[firstServerIndex] += coldSlices[i].reqNum;
+                    appServersInfo[secondServerIndex] -= coldSlices[i].reqNum;
+                } else {
+
+                    keyChurn += calKeyChurn(firstSlice); 
+                    if(keyChurn > KEY_CHURN_LIMIT) {
+                        break;
+                    }
+
+                    // update server's load
+                    appServersInfo[firstServerIndex] -= coldSlices[i-1].reqNum;
+                    appServersInfo[secondServerIndex] += coldSlices[i-1].reqNum; 
+                }
+            }
+
+            // update the second slice range in sortedSliceToServer
+            sortedSliceToServer[coldSlices[i].index].slice = mergedSlice; 
+            // remove the first slice in sortedSliceToServer array 
+            // slicesIndexToRemove.push(coldSlices[i-1].index);
+            slicesIndexToRemove.add(coldSlices[i-1].index);
+
+            // update reqNum and slice in coldSlices for next merge
+            coldSlices[i].reqNum = mergedReq; 
+            coldSlices[i].slice = mergedSlice; 
+
+            // remove the two old slices in slicesInfo and add the new slice
+            delete slicesInfo[JSON.stringify(firstSlice)];
+            delete slicesInfo[JSON.stringify(secondSlice)];
+            slicesInfo[JSON.stringify(mergedSlice)] = mergedReq;
+        }
+    }
+
+    // remove merged slices from sortedSliceToSever
+    let newSortedSliceToServer = []; 
+    for(let i = 0; i < sortedSliceToServer.length; i++) {
+        if(!slicesIndexToRemove.has(i)){
+            newSortedSliceToServer.push(sortedSliceToServer[i]); 
+        }
+    }
+
+    sortedSliceToServer = newSortedSliceToServer; 
+}
+
+function move() {
+    let maxHeapServerLoad = new Heap(compareLoadMaxH); 
+    let minHeapServerLoad = new Heap(compareLoadMinH); 
+
+    for(let i = 0; i < appServersInfo.length; i++) {
+        maxHeapServerLoad.push({load: appServersInfo[i], serverIndex: i}); 
+        minHeapServerLoad.push({load: appServersInfo[i], serverIndex: i}); 
+    }
+
+    let prevColdest = new Set(); 
+    while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > 1.25 ) {
+        // get hottest and coldest server
+        let hottestServerIndex = maxHeapServerLoad.peek().serverIndex; 
+        let coldestServerIndex = minHeapServerLoad.peek().serverIndex;  
+
+        if(hottestServerIndex == coldestServerIndex){
+            break;
+        }
+
+        // prevent moving the hottest slice back-and-forth
+        if(prevColdest.has(hottestServerIndex)){
+            maxHeapServerLoad.pop(); 
+            continue; 
+        }
+        prevColdest.add(coldestServerIndex); 
+
+        // get information of hottest slice
+        let hottestSlice = serverSlices[hottestServerIndex].peek().slice;
+        let hottestSliceReq = serverSlices[hottestServerIndex].peek().reqNum;
+
+        // calculate key churn
+        keyChurn += calKeyChurn(hottestSlice); 
+
+        if (keyChurn >= KEY_CHURN_LIMIT){
+            break;
+        }
+        
+        // update heaps 
+        
+        let hottestLoad = maxHeapServerLoad.peek().load - hottestSliceReq; 
+        let coldestLoad = minHeapServerLoad.peek().load + hottestSliceReq; 
+
+        maxHeapServerLoad.pop(); 
+        minHeapServerLoad.pop(); 
+
+        maxHeapServerLoad.push({load: hottestLoad, serverIndex: hottestServerIndex}); 
+        maxHeapServerLoad.push({load: coldestLoad, serverIndex: coldestServerIndex}); 
+        minHeapServerLoad.push({load: coldestLoad, serverIndex: coldestServerIndex}); 
+        minHeapServerLoad.push({load: hottestLoad, serverIndex: hottestServerIndex}); 
+
+        // update serverSlices
+        // remove target slice from hottest server and add to coldest server
+        serverSlices[hottestServerIndex].pop(); 
+        serverSlices[coldestServerIndex].push({reqNum: hottestSliceReq, slice: hottestSlice}); 
+
+        // update serversInfo
+        appServersInfo[hottestServerIndex] = hottestLoad; 
+        appServersInfo[coldestServerIndex] = coldestLoad;  
+    }
+
+    // update moved slices' server index in sortedSliceToServer
+    let newSortedSliceToServer = []; 
+    
+    for(let i = 0; i < serverSlices.length; i++) {
+        //let clonedSlices = structuredClone(serverSlices[i]); 
+        while(!serverSlices[i].isEmpty()){
+            newSortedSliceToServer.push({slice: serverSlices[i].peek().slice, serverIndex: i}); 
+            serverSlices[i].pop();
+        }
+        
+    }
+
+    newSortedSliceToServer.sort((a, b) => a.slice.start - b.slice.start);
+    sortedSliceToServer = newSortedSliceToServer; 
+
+}
+
+function split() {
+    let newSlicesInfo = {}; 
+    let newSortedSliceToServer = []; 
+
+    for(let i = 0; i < sortedSliceToServer.length; i++){
+        let slice = JSON.parse(JSON.stringify(sortedSliceToServer[i].slice)); 
+        let serverIndex = sortedSliceToServer[i].serverIndex; 
+        let sliceStr = JSON.stringify(slice); 
+        let reqNum = slicesInfo[sliceStr]; 
+
+        // check whether the reqNum is higher than threshold
+        // and whether the slice can still be split
+        if(reqNum > hotSliceThres && slice.end > slice.start) {
+            let mid = Math.floor((slice.end - slice.start) / 2) + slice.start; 
+            let newSlice = {start: slice.start, end: mid};
+
+            // initilize new slice's request number to half of orifinal request number 
+            newSlicesInfo[JSON.stringify(newSlice)] = Math.floor(reqNum / 2); 
+            reqNum -= newSlicesInfo[JSON.stringify(newSlice)]; 
+            newSortedSliceToServer.push({slice: newSlice, serverIndex: serverIndex}); 
+            slice.start = mid + 1; 
+        }
+
+        newSlicesInfo[JSON.stringify(slice)] = reqNum; 
+        newSortedSliceToServer.push({slice: slice, serverIndex: serverIndex}); 
+    }
+
+    slicesInfo = newSlicesInfo;
+    sortedSliceToServer = newSortedSliceToServer; 
+}
+
+function updateVars() {
+
+    calAvgReq();
+
+    coldSliceTres = avgReqPerSlice * 0.5; 
+    hotSliceThres = avgReqPerSlice * 2; 
+
+    keyChurn = 0; 
+}
+
 
 initialize();
 setInterval(periodicMonitoringAndLoadBalancing, LOAD_BALANCING_INTERVAL_MILLISECONDS);
