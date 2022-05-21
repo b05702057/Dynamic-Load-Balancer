@@ -9,6 +9,9 @@
   "author": "Kiet Pham",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.27.2"
+    "axios": "^0.27.2",
+    "heap-js": "^2.2.0",
+    "set-interval-async": "^2.0.3",
+    "simple-node-logger": "^21.8.12"
   }
 }

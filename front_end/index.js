@@ -2,16 +2,19 @@ const   express     = require('express'),
 	    bodyParser  = require('body-parser'),
         path        = require('node:path'),
         axios       = require('axios'),
+        cluster     = require('cluster'),
         Hub         = require('cluster-hub'),
-        http        = require('node:http');
+        http        = require('node:http'),
+        farmhash    = require('farmhash'),
+        fs          = require('fs');
 
 var hub = new Hub();
 
-
-const cluster = require('cluster');
-
 const totalNumCPUs = require("os").cpus().length;
 // const totalNumCPUs = 1;  // TODO testing
+
+// Don't add whitespace here, rely on replace() regex for that
+const MACHINE_ADDRESSES_SEPARATOR = ",";
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
@@ -23,7 +26,23 @@ const UPDATE_SHARD_MAP_HUB_MESSAGE = 'updateShardMap';
 
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
-const appServerAddresses = ['http://localhost:8080/'];
+
+let appServerAddresses = [];
+
+// Read in addresses
+try {
+    let lines = fs.readFileSync('../addresses_of_machines.txt').toString().split("\n");
+    // lines[0]: front ends, lines[1]: app servers. Addresses are separated by comma and space ", "
+    let appServerLine = lines[1].replace(/\s+/g, '');  // remove whitespace
+    appServerAddresses = appServerLine.split(MACHINE_ADDRESSES_SEPARATOR);
+
+    console.log("appServerAddresses:");
+    console.log(appServerAddresses);
+} catch (err) {
+    console.error(err);
+}
+
+
 let appServerAxiosClients = new Array(appServerAddresses.length);
 for (let i = 0; i < appServerAxiosClients.length; i++) {
     appServerAxiosClients[i] = axios.create({
@@ -100,7 +119,7 @@ if (cluster.isMaster) {
         });
     });
 } else {
-    console.log(`Worker with pid: ${process.pid} running`);
+    console.log(`Front end worker with pid: ${process.pid} running`);
 
     // Array of slice, server_id pair object. i.e "shard map"
     let sortedSliceToServer = [];
@@ -113,18 +132,24 @@ if (cluster.isMaster) {
         callback(null, "worker updated!");
     });
 
-    function findSliceForKey(sortedSliceToServer, hashedKey) {
+    // Returns the {slice, serverIndex} pair object reference in sortedSliceToServer in which the hashedKeyInt belongs.
+    // If no range contains hashedKeyInt, then returns null.
+    function findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt) {
         let startIdx = 0;
         let endIdx = sortedSliceToServer.length - 1;
 
         while (startIdx <= endIdx) {
-            mid = Math.floor((startIdx - endIdx) / 2);
-            if (hashedKey >= sortedSliceToServer[mid].start && hashedKey <= sortedSliceToServer[mid].end) {
+            const mid = Math.floor((startIdx + endIdx) / 2);
+
+            if (hashedKeyInt >= sortedSliceToServer[mid].slice.start && hashedKeyInt <= sortedSliceToServer[mid].slice.end) {
                 return sortedSliceToServer[mid];
-            } else if (hashedKey > sortedSliceToServer[mid].end) {
+            } else if (hashedKeyInt > sortedSliceToServer[mid].slice.end) {
                 startIdx = mid + 1;
-            } else if (hashedKey < sortedSliceToServer[mid].start) {
+            } else if (hashedKeyInt < sortedSliceToServer[mid].slice.start) {
                 endIdx = mid - 1;
+            } else {
+                console.log('ERROR: NOT SUPPOSED TO BE HERE!');
+                break;
             }
         }
 
@@ -256,17 +281,30 @@ if (cluster.isMaster) {
     });
 
     app.post('/kv-request', async (req, res) => {
-        console.log(`Worker ${process.pid} serving kv-request`);
+        console.log(`Front end worker ${process.pid} serving kv-request`);
 
         const { requestType, key, value } = req.body;
 
         console.log(req.body);
 
-        // TODO make sure the finding correct slice to server and updating request count
-        // do not happen across any async point to avoid using locks.
-        
-        // TODO now using the only client but should use mapping calculations later
-        appServerAxiosClients[0].post('/kv-request', {
+        // Find which server to route to by hashing key and checking shard map (sortedSliceToServer)
+
+        // fingerprint32 returns a number which is an unsigned 32 bit integer. same result on all
+        // platforms unlike hash32
+        const hashedKeyInt = farmhash.fingerprint32(key);
+        const sliceAndServerObj = findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt);
+
+        let appServerIndexToRoute = null;
+        if (sliceAndServerObj === null) {
+            res.status(500).send({
+                message: 'ERROR: Cannot find a slice range containing the hashedKey. Shard map has holes?'
+            });
+            return;
+        } else {
+            appServerIndexToRoute = sliceAndServerObj.serverIndex;
+        }
+
+        appServerAxiosClients[appServerIndexToRoute].post('/kv-request', {
             requestType: requestType,
             key: key,
             value: value
@@ -275,9 +313,9 @@ if (cluster.isMaster) {
         })
         .catch(function (error) {
             console.log(error);
-            // For now just senjd generic 500 error to client
-            res.status(500).send({
-                message: 'Some error'
+            // Forward error
+            res.status(error.response.status).send({
+                message: error.response.data.message
             });
         });
     });
