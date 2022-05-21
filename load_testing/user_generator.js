@@ -46,6 +46,13 @@ function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) 
     return phase_idx + 1;
 }
 
+function generateKeysForAllPhases(phases, sample_lists, element_list, keys) {
+    var phase_idx = 0;
+    for (let i = 0; i < phases.length; i++) {
+        phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys);
+    }
+}
+
 function addRequestValues(element_list, max_value_length) {
     var output_list = []
     element_list.forEach(element => {
@@ -185,16 +192,13 @@ sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
 var phases = doc.config.phases;
-var phase_idx = 0;
 
 // generate elements for each phase
 var element_list = []; // output
-phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 0
-phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 1
-phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys); // phase 2
+generateKeysForAllPhases(phases, sample_lists, element_list, keys);
 
 // write the elements
-const max_value_length = 15;
+const max_value_length = 100;
 element_list = addRequestValues(element_list, max_value_length);
 element_list = addRequestTypes(element_list);
 var elements = element_list.join("\n");

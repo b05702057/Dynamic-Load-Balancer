@@ -1,0 +1,4 @@
+local
+BasicStore
+basicStoreData.json
+http://localhost:8888/

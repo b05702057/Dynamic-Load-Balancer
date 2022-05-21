@@ -31,9 +31,56 @@ Run customized users:
 
     artillery run customized_test.yml  
     
+download local DynamoDB here:
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html#DynamoDBLocal.DownloadingAndRunning.title
 
+DynamoDB:
 
-Other resources:
+    cd DB
+
+    npm install
+    
+    aws configure
+    
+    AWS Access Key ID: fakeMyKeyId
+    
+    AWS Secret Access Key: fakeSecretAccessKey
+    
+    Default region name:
+    
+    Default output format: 
+    
+Start DynamoDB:
+
+    cd dynamodb_local_latest
+
+    java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb -port 8888
+    
+List Tables:
+    
+    aws dynamodb list-tables --endpoint-url http://localhost:8888
+    
+List Specific Table Entries:
+
+    aws dynamodb scan --table-name BasicStore --endpoint-url http://localhost:8888
+    
+Create Table:
+
+    node createTable.js
+    
+Delete Table:
+
+    node deleteTable.js
+    
+Get Items:
+
+    node getItem.js
+
+Set Items:
+
+    node setItem.js
+    
+Check Other resources:
 
 https://axios-http.com/docs/api_intro 
 

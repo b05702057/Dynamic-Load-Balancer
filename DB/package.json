@@ -1,0 +1,15 @@
+{
+    "name": "dynamic_load_balancer_database",
+    "version": "1.0.0",
+    "description": "\"database for general purpose dynamic load balancer\"",
+    "main": "createTable.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Zack Lee",
+    "license": "ISC",
+    "dependencies": {
+        "aws-sdk": "^2.1140.0",
+        "fs": "^0.0.1-security"
+    }
+}
