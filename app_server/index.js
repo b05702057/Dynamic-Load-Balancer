@@ -6,6 +6,16 @@ const   express     = require('express'),
         util        = require('util'),
         redis       = require('redis'),
         farmhash    = require('farmhash');
+
+const commandLineArgs = require('minimist')(process.argv.slice(2));
+
+if (process.argv.length < 3 || commandLineArgs.port === undefined) {
+    console.error("ERROR: Missing port argument");
+    console.log("Example usage: node index.js --port <port_num>");
+    process.exit(1);
+}
+const serverPort = parseInt(commandLineArgs.port);
+console.log(serverPort);
     
 var createRedisClient = redis.createClient;
 
@@ -16,7 +26,7 @@ const cluster = require('cluster');
 
 const totalNumCPUs = require("os").cpus().length;
 
-const serverPort = 8080;
+
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
 const REQUEST_LOAD_HUB_MESSAGE = 'requestLoad';
 const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
