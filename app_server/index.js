@@ -3,8 +3,9 @@ const   express     = require('express'),
         path        = require('node:path'),
         osu         = require('node-os-utils'),
         Hub         = require('cluster-hub')
-        util        = require('util');
-        redis       = require('redis');
+        util        = require('util'),
+        redis       = require('redis'),
+        farmhash    = require('farmhash');
     
 var createRedisClient = redis.createClient;
 
@@ -121,13 +122,15 @@ if (cluster.isMaster) {
 } else {
     console.log(`Worker with pid: ${process.pid} running`);
 
-    // TODO TESTING
-    let dummySlice = {start: 10, end: 20};
+    
     // Maps slice to request count
     let slicesInfo = {};
-    slicesInfo[JSON.stringify(dummySlice)] = 200; // TODO TESTING
-    
+    // Vector of sorted slices this server is responsible for
     let sortedResponsibleSlices = [];
+
+    // TODO TESTING
+    let dummySlice = {start: 10, end: 20};
+    slicesInfo[JSON.stringify(dummySlice)] = 200; // TODO TESTING
 
 
     // Create and connect redis client
@@ -155,7 +158,7 @@ if (cluster.isMaster) {
         let newSlicesInfo = {};
         let newSortedResponsibleSlices = [];
         // Initialize to 0 and push to sortedResponsibleSlices array
-        for (const slice of data['slicesArray']) {
+        for (const slice of data.slicesArray) {
             newSlicesInfo[JSON.stringify(slice)] = 0;
             newSortedResponsibleSlices.push(slice);
         };
@@ -173,6 +176,29 @@ if (cluster.isMaster) {
         callback(null, "Worker successfully updated responsible slices");
     });
 
+
+    // Returns the slice object reference in sortedResponsibleSlices in which the hashedKeyInt belongs.
+    // If no range contains hashedKeyInt, then returns null.
+    function findSliceForKey(sortedResponsibleSlices, hashedKeyInt) {
+        let startIdx = 0;
+        let endIdx = sortedResponsibleSlices.length - 1;
+
+        while (startIdx <= endIdx) {
+            const mid = Math.floor((startIdx + endIdx) / 2);
+            if (hashedKeyInt >= sortedResponsibleSlices[mid].start && hashedKeyInt <= sortedResponsibleSlices[mid].end) {
+                return sortedResponsibleSlices[mid];
+            } else if (hashedKeyInt > sortedResponsibleSlices[mid].end) {
+                startIdx = mid + 1;
+            } else if (hashedKeyInt < sortedResponsibleSlices[mid].start) {
+                endIdx = mid - 1;
+            } else {
+                console.log('ERROR: NOT SUPPOSED TO BE HERE!');
+                break;
+            }
+        }
+
+        return null;
+    }
 
     const app = express();
     
@@ -272,10 +298,25 @@ if (cluster.isMaster) {
 
         console.log(req.body);
 
-        // TODO ENSURE KEY IS IN RESPONSIBLE SLICES AND UPDATE REQ COUNT SLICESINFO
-        // make sure that does not happen across any async point to avoid using locks.
+        // Make sure that key slice find and updating request count does not 
+        // happen across any async point to avoid using locks.
 
+        // Check that this server is indeed responsible for the slice containing the
+        // hashed key
+        const hashedKeyInt = farmhash.hash32(key);
+        const slice = findSliceForKey(sortedResponsibleSlices, hashedKeyInt);
+        if (slice === null) {
+            // Use code 410 for this
+            res.status(410).send({
+                message: 'This server is not responsible for the slice serving this key'
+            });
+            return;
+        }
 
+        // Increment request count for that slice
+        // If there is error here (e.g. element is undefined) means that we didnt update both
+        // slicesInfo and sortedResponsibleSlices correctly (inconsistent view)
+        slicesInfo[JSON.stringify(slice)] += 1;
         
         if (requestType === "get") {
             try {

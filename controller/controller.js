@@ -13,17 +13,20 @@ const appServerAddresses = ['http://localhost:8080/'];
 let frontEndAxiosClients = new Array(frontEndAddresses.length);
 let appServerAxiosClients = new Array(appServerAddresses.length);
 
+// 2^32 - 1
+const KEYSPACE_MAX = 4294967295;
+
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
 // Maps slice to request count.
 let slicesInfo = {};
 let sortedSliceToServer = [
     {
-        slice: {start: 10, end: 20},
+        slice: {start: 0, end: 20},
         serverIndex: 0,
     },
     {
-        slice: {start: 21, end: 40},
+        slice: {start: 21, end: KEYSPACE_MAX},
         serverIndex: 0,
     },
 ]; // TODO TESTING VALUES

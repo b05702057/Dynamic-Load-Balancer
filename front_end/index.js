@@ -3,15 +3,16 @@ const   express     = require('express'),
         path        = require('node:path'),
         axios       = require('axios'),
         Hub         = require('cluster-hub'),
-        http        = require('node:http');
+        http        = require('node:http'),
+        farmhash    = require('farmhash');
 
 var hub = new Hub();
 
 
 const cluster = require('cluster');
 
-const totalNumCPUs = require("os").cpus().length;
-// const totalNumCPUs = 1;  // TODO testing
+// const totalNumCPUs = require("os").cpus().length;
+const totalNumCPUs = 1;  // TODO testing
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
@@ -113,18 +114,24 @@ if (cluster.isMaster) {
         callback(null, "worker updated!");
     });
 
-    function findSliceForKey(sortedSliceToServer, hashedKey) {
+    // Returns the {slice, serverIndex} pair object reference in sortedSliceToServer in which the hashedKeyInt belongs.
+    // If no range contains hashedKeyInt, then returns null.
+    function findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt) {
         let startIdx = 0;
         let endIdx = sortedSliceToServer.length - 1;
 
         while (startIdx <= endIdx) {
-            mid = Math.floor((startIdx - endIdx) / 2);
-            if (hashedKey >= sortedSliceToServer[mid].start && hashedKey <= sortedSliceToServer[mid].end) {
+            const mid = Math.floor((startIdx + endIdx) / 2);
+
+            if (hashedKeyInt >= sortedSliceToServer[mid].slice.start && hashedKeyInt <= sortedSliceToServer[mid].slice.end) {
                 return sortedSliceToServer[mid];
-            } else if (hashedKey > sortedSliceToServer[mid].end) {
+            } else if (hashedKeyInt > sortedSliceToServer[mid].slice.end) {
                 startIdx = mid + 1;
-            } else if (hashedKey < sortedSliceToServer[mid].start) {
+            } else if (hashedKeyInt < sortedSliceToServer[mid].slice.start) {
                 endIdx = mid - 1;
+            } else {
+                console.log('ERROR: NOT SUPPOSED TO BE HERE!');
+                break;
             }
         }
 
@@ -262,11 +269,23 @@ if (cluster.isMaster) {
 
         console.log(req.body);
 
-        // TODO make sure the finding correct slice to server and updating request count
-        // do not happen across any async point to avoid using locks.
-        
-        // TODO now using the only client but should use mapping calculations later
-        appServerAxiosClients[0].post('/kv-request', {
+        // Find which server to route to by hashing key and checking shard map (sortedSliceToServer)
+
+        // hash32 returns a number which is an unsigned 32 bit integer
+        const hashedKeyInt = farmhash.hash32(key);
+        const sliceAndServerObj = findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt);
+
+        let appServerIndexToRoute = null;
+        if (sliceAndServerObj === null) {
+            res.status(500).send({
+                message: 'ERROR: Cannot find a slice range containing the hashedKey. Shard map has holes?'
+            });
+            return;
+        } else {
+            appServerIndexToRoute = sliceAndServerObj.serverIndex;
+        }
+
+        appServerAxiosClients[appServerIndexToRoute].post('/kv-request', {
             requestType: requestType,
             key: key,
             value: value
@@ -275,9 +294,9 @@ if (cluster.isMaster) {
         })
         .catch(function (error) {
             console.log(error);
-            // For now just senjd generic 500 error to client
-            res.status(500).send({
-                message: 'Some error'
+            // Forward error
+            res.status(error.response.status).send({
+                message: error.response.data.message
             });
         });
     });
