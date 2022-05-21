@@ -9,7 +9,7 @@ var params = {
     TableName: 'BasicStore',
     Key: {
         "Key": {
-            "S": "SzHSKvUDa"
+            "S": "uEc"
         }
     },
 };

@@ -2,7 +2,7 @@ var AWS = require("aws-sdk");
 AWS.config.update({
     region: "local",
     endpoint: "http://localhost:8888"
-  });
+});
 
 var dynamodb = new AWS.DynamoDB(); // low-level client
 var params = { TableName : "BasicStore" };
