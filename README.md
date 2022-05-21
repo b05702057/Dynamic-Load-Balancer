@@ -39,9 +39,13 @@ DynamoDB:
     
     aws configure
     
-    AWS Access Key ID: "fakeMyKeyId"
+    AWS Access Key ID: fakeMyKeyId
     
-    AWS Secret Access Key: "fakeSecretAccessKey"
+    AWS Secret Access Key: fakeSecretAccessKey
+    
+    Default region name:
+    
+    Default output format: 
     
 Start DynamoDB:
 
