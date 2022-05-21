@@ -191,7 +191,7 @@ async function getLoadFromAppServers() {
         all_promises.push(appServerClient.get('/get-load-info'));
     }
 
-    Promise.all(all_promises)
+    await Promise.all(all_promises)
     .then((allResponses) => {
         // handle success
         for (const [serverIdx, response] of allResponses.entries()) {
@@ -345,7 +345,7 @@ function merge() {
             
             // merge two slices
             let mergedSlice = {start: firstSlice.start, end: secondSlice.end}; 
-            let mergedReq = slicesInfo[JSON.stringify(firstSlice)] + slicesInfo[JSON.stringify(secondSlice)];  
+            let mergedReq = slicesInfo[JSON.stringify(firstSlice)] + slicesInfo[JSON.stringify(secondSlice)]; 
 
             // add keyChurn if two slices are on different servers
             // and move request load
@@ -422,6 +422,7 @@ function move() {
         let coldestServerIndex = minHeapServerLoad.peek().serverIndex;  
 
         if(hottestServerIndex == coldestServerIndex){
+            console.log("Breaking move since hottestServerIndex == coldestServerIndex");
             break;
         }
 
@@ -440,8 +441,11 @@ function move() {
         keyChurn += calKeyChurn(hottestSlice); 
 
         if (keyChurn >= KEY_CHURN_LIMIT){
+            console.log("Breaking move because of key churn limit");
             break;
         }
+
+        console.log("MOVING!!!");
         
         // update heaps 
         
