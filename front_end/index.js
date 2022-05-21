@@ -11,8 +11,8 @@ var hub = new Hub();
 
 const cluster = require('cluster');
 
-// const totalNumCPUs = require("os").cpus().length;
-const totalNumCPUs = 1;  // TODO testing
+const totalNumCPUs = require("os").cpus().length;
+// const totalNumCPUs = 1;  // TODO testing
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
