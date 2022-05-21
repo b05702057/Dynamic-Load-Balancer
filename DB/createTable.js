@@ -1,13 +1,23 @@
-//scrantonTable.js
 const AWS = require("aws-sdk");
+const fs = require('fs');
+
+const localRegion = "local";
+let lines = fs.readFileSync('config.txt').toString().split("\n");
+let region = lines[0].replace(/\s+/g, '');  // remove whitespace
+let TableName = lines[1].replace(/\s+/g, '');  // remove whitespace
+let endpoint = "";
+if (region === localRegion) {
+    endpoint = lines[3].replace(/\s+/g, '');  // remove whitespace
+}
+
 AWS.config.update({
-  region: "local",
-  endpoint: "http://localhost:8888"
+  region,
+  endpoint
 });
 
 var dynamodb = new AWS.DynamoDB();
 var params = {
-    TableName : "BasicStore",
+    TableName,
     KeySchema: [
         { AttributeName: "Key", KeyType: "HASH"}, // partition key
 ],
@@ -19,6 +29,7 @@ var params = {
         WriteCapacityUnits: 10,
     }
 };
+
 dynamodb.createTable(params, function(err, data) {
     if (err) {
         console.error("Error JSON.", JSON.stringify(err, null, 2));
