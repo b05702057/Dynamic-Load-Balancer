@@ -15,18 +15,24 @@ const SimpleNodeLogger = require('simple-node-logger'),
 logger = SimpleNodeLogger.createSimpleLogger( opts );
 
 
+// Whether it is dynamic auto sharding or consistent hashing mode.
+const CONSISTENT_HASHING_MODE = false;
+
 // Don't add whitespace here, rely on replace() regex for that
 const MACHINE_ADDRESSES_SEPARATOR = ",";
 
 // 2^32 - 1
-const KEYSPACE_MAX = 4294967295;
+const KEYSPACE_MAX_INCLUSIVE = 4294967295;
 const KEY_CHURN_FRACTION_LIMIT = 0.3; // TODO testing
-const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX * KEY_CHURN_FRACTION_LIMIT); 
+const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX_INCLUSIVE * KEY_CHURN_FRACTION_LIMIT); 
 
 const HOT_SLICE_THRESHOLD_RATIO_TO_AVG = 2; 
 const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 0.5;
 
 const MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO = 1.25;
+
+// Number of slices per server in initial assignment
+const DYNAMIC_LOAD_BALANCING_NUM_INITIAL_SLICES_PER_SERVER = 2;
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
@@ -85,49 +91,9 @@ const compareLoadMinH = (a, b) => {
 }
 
 // sortedSliceToServer: [{slice, serverIndex}]
-// let sortedSliceToServer = [
-//     {
-//         slice: {start: 0, end: 10},
-//         serverIndex: 0,
-//     },
-//     {
-//         slice: {start: 11, end: 15},
-//         serverIndex: 1,
-//     },
-//     {
-//         slice: {start: 16, end: 20},
-//         serverIndex: 1,
-//     },
-//     {
-//         slice: {start: 21, end: KEYSPACE_MAX},
-//         serverIndex: 0,
-//     },
-
-// ]; // TODO TESTING VALUES
-let sortedSliceToServer = [
-    {
-        slice: {start: 0, end: Math.floor(KEYSPACE_MAX / 4)},
-        serverIndex: 0,
-    },
-    {
-        slice: {start: Math.floor(KEYSPACE_MAX / 4) + 1, end: Math.floor(2 * KEYSPACE_MAX / 4)},
-        serverIndex: 1,
-    },
-    {
-        slice: {start: Math.floor(2 * KEYSPACE_MAX / 4) + 1, end: Math.floor(3 * KEYSPACE_MAX / 4)},
-        serverIndex: 1,
-    },
-    {
-        slice: {start: Math.floor(3 * KEYSPACE_MAX / 4) + 1, end: KEYSPACE_MAX},
-        serverIndex: 0,
-    },
-
-]; // TODO TESTING VALUES
+let sortedSliceToServer = [];
 // slicesInfo: {Slice: reqNum}
 let slicesInfo = {};
-for (const sliceAndServerObj of sortedSliceToServer) {
-    slicesInfo[JSON.stringify(sliceAndServerObj.slice)] = 0;
-}
 
 // appServersInfo: [load]
 let appServersInfo = []; 
@@ -164,49 +130,102 @@ function initialize() {
         });
     }
 
+    // Generates assignment and populate sortedSliceToServer and slicesInfo
+    generateInitialAssignment();
+
+}
+
+// Populates sortedSliceToServer and slicesInfo with intial assignment
+function generateInitialAssignment() {
+    let numSlicesPerServer = DYNAMIC_LOAD_BALANCING_NUM_INITIAL_SLICES_PER_SERVER;
+
+    // If consistent hashing then only one slice
+    if (CONSISTENT_HASHING_MODE) {
+        numSlicesPerServer = 1;
+    }
+    
+    let numTotalInitialSlices = numSlicesPerServer * appServerAddresses.length;
+
+    // Each intial slice's length (except maybe the last which will need to ensure not to exceed KEYSPACE_MAX_INCLUSIVE)
+    let sliceLength = Math.floor((KEYSPACE_MAX_INCLUSIVE + 1) / numTotalInitialSlices);
+
+    let curSliceStart = 0;
+
+    // Update global sortedSliceToServer
+    for (let serverIndex = 0; serverIndex < appServerAddresses.length; ++serverIndex) {
+        for (let serverSliceIdx = 0; serverSliceIdx < numSlicesPerServer; ++serverSliceIdx) {
+            // Slice end is sliceStart + length - 1. Make sure not to exceed KEYSPACE_MAX_INCLUSIVE
+            let cursliceEnd = Math.min(curSliceStart + sliceLength - 1, KEYSPACE_MAX_INCLUSIVE);
+            // Push entry to sortedSliceToServer
+            sortedSliceToServer.push({
+                slice: {
+                    start: curSliceStart,
+                    end: cursliceEnd,
+                },
+                serverIndex: serverIndex
+            });
+
+            // Update curSliceStart
+            curSliceStart = cursliceEnd + 1;
+        }
+    }
+
+    // Update global slicesInfo var
+    for (const sliceAndServerObj of sortedSliceToServer) {
+        slicesInfo[JSON.stringify(sliceAndServerObj.slice)] = 0;
+    }
 }
 
 async function periodicMonitoringAndLoadBalancing() {
     // Only get load if not initial run. 
-    // TODO If initial run generate assignment? 
     if (!isInitialRunLoadBalancingRun) {
         // Populates slicesInfo
         await getLoadFromAppServers();
     }
-    isInitialRunLoadBalancingRun = false;
 
-    // // Populates slicesInfo
-    // await getLoadFromAppServers();
-    // isInitialRunLoadBalancingRun = false;
-
-  
-
-    // TODO testing print
-    console.log("BEFORE ALG SLICES INFO:");
-    console.log(slicesInfo);
-    console.log("BEFORE ALG SORTEDSLICETOSERVER:");
-    console.log(sortedSliceToServer);
-
-    // update global variables 
+    // update global variables based on new load information
     updateVars(); 
-
+    // Calculate load and update appServersInfo
     calServerLoad(); 
-    merge();
 
-    // generate serverSlices and serversInfo with new data after merge
-    genServerSlices();
+    // Extract max and min load to calculate imbalance
+    const minServerLoad = Math.min(...appServersInfo);
+    const maxServerLoad = Math.max(...appServersInfo);
+    const imbalance = maxServerLoad / minServerLoad;
 
-    move(); 
-    split();  
+    // Log imbalance
+    logger.info('CONSISTENT_HASHING_MODE=' + CONSISTENT_HASHING_MODE + ', Imbalance: ' + imbalance.toString());
 
-    // TODO testing print
-    console.log("AFTER ALG SLICES INFO:");
-    console.log(slicesInfo);
-    console.log("AFTER ALG SORTEDSLICETOSERVER:");
-    console.log(sortedSliceToServer);
+    
+    // If dynamic load balancing, then do algorithm
+    // to update mappings. Else if consistent hashing then do nothing.
+    if (!CONSISTENT_HASHING_MODE) {
+        // TODO testing print
+        console.log("BEFORE ALG SLICES INFO:");
+        console.log(slicesInfo);
+        console.log("BEFORE ALG SORTEDSLICETOSERVER:");
+        console.log(sortedSliceToServer);
 
-    sendUpdatedMappings(); 
+        merge();
 
+        // generate serverSlices and serversInfo with new data after merge
+        genServerSlices();
+
+        move(); 
+        split();  
+
+        // TODO testing print
+        console.log("AFTER ALG SLICES INFO:");
+        console.log(slicesInfo);
+        console.log("AFTER ALG SORTEDSLICETOSERVER:");
+        console.log(sortedSliceToServer);
+    }
+
+    // Even if consistent hashing mode, always send mappings (which will be the same) to app servers sot hey can 
+    // refresh req load counts
+    sendUpdatedMappings();
+
+    isInitialRunLoadBalancingRun = false;
 }
 
 // Populates slicesInfo with new load info
@@ -312,6 +331,7 @@ function genServerSlices(){
     
 }
 
+// Calculate load and update appServersInfo
 function calServerLoad() {
     let newServersInfo = [];
      
@@ -447,10 +467,6 @@ function move() {
     let keyChurn = 0;
     let prevColdest = new Set(); 
 
-    const maxImbalance = maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load;
-    // Log max imbalance
-    logger.info('Max imbalance: ' + maxImbalance.toString());
-
     while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO ) {
         // get hottest and coldest server
         let hottestServerIndex = maxHeapServerLoad.peek().serverIndex; 
@@ -486,6 +502,11 @@ function move() {
         
         let hottestLoad = maxHeapServerLoad.peek().load - hottestSliceReq; 
         let coldestLoad = minHeapServerLoad.peek().load + hottestSliceReq; 
+
+        if (coldestLoad > hottestLoad) {
+            maxHeapServerLoad.pop();
+            continue;
+        }
 
         maxHeapServerLoad.pop(); 
         minHeapServerLoad.pop(); 
@@ -558,7 +579,7 @@ function updateVars() {
     calAvgReq();
 
     coldSliceTres = avgReqPerSlice * COLD_SLICE_THRESHOLD_RATIO_TO_AVG; 
-    hotSliceThres = avgReqPerSlice * HOT_SLICE_THRESHOLD_RATIO_TO_AVG; 
+    hotSliceThres = avgReqPerSlice * HOT_SLICE_THRESHOLD_RATIO_TO_AVG + 1; 
 
     keyChurn = 0; 
 }
