@@ -67,15 +67,15 @@ Delete Table:
 
     node deleteTable.js
     
-getItem:
+Get Items:
 
     node getItem.js
 
-setItem:
+Set Items:
+
     node setItem.js
     
-check
-Other resources:
+Check Other resources:
 
 https://axios-http.com/docs/api_intro 
 
