@@ -202,7 +202,8 @@ async function getLoadFromAppServers() {
 
         // Update slicesInfo
         slicesInfo = newSlicesInfo;
-        console.log('New slicesInfo is:' + JSON.stringify(slicesInfo));
+        console.log('New slicesInfo is:');
+        console.log(slicesInfo);
     })
     .catch((err) => {
         console.log('Error getting load from Some server');
