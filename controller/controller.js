@@ -1,7 +1,10 @@
 const axios = require('axios');
 const http = require('node:http');
 const { Heap } = require('heap-js'); 
+const fs = require('fs');
 
+// Don't add whitespace here, rely on replace() regex for that
+const MACHINE_ADDRESSES_SEPARATOR = ",";
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
@@ -14,8 +17,25 @@ const KEYSPACE_MAX = 4294967295;
 
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
-const frontEndAddresses = ['http://localhost:3000/'];
-const appServerAddresses = ['http://localhost:8080/'];
+let frontEndAddresses = [];
+let appServerAddresses = [];
+
+// Read in addresses
+try {
+    let lines = fs.readFileSync('../addresses_of_machines.txt').toString().split("\n");
+    // lines[0]: front ends, lines[1]: app servers. Addresses are separated by comma and space ", "
+    let frontEndLine = lines[0].replace(/\s+/g, '');  // remove whitespace
+    let appServerLine = lines[1].replace(/\s+/g, '');  // remove whitespace
+    frontEndAddresses = frontEndLine.split(MACHINE_ADDRESSES_SEPARATOR)
+    appServerAddresses = appServerLine.split(MACHINE_ADDRESSES_SEPARATOR);
+
+    console.log("appServerAddresses:");
+    console.log(appServerAddresses);
+} catch (err) {
+    console.error(err);
+}
+
+
 
 let frontEndAxiosClients = new Array(frontEndAddresses.length);
 let appServerAxiosClients = new Array(appServerAddresses.length);

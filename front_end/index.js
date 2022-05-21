@@ -2,17 +2,19 @@ const   express     = require('express'),
 	    bodyParser  = require('body-parser'),
         path        = require('node:path'),
         axios       = require('axios'),
+        cluster     = require('cluster'),
         Hub         = require('cluster-hub'),
         http        = require('node:http'),
-        farmhash    = require('farmhash');
+        farmhash    = require('farmhash'),
+        fs          = require('fs');
 
 var hub = new Hub();
 
-
-const cluster = require('cluster');
-
 const totalNumCPUs = require("os").cpus().length;
 // const totalNumCPUs = 1;  // TODO testing
+
+// Don't add whitespace here, rely on replace() regex for that
+const MACHINE_ADDRESSES_SEPARATOR = ",";
 
 const serverPort = 3000;
 const CONNECTION_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 15000;
@@ -24,7 +26,23 @@ const UPDATE_SHARD_MAP_HUB_MESSAGE = 'updateShardMap';
 
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
-const appServerAddresses = ['http://localhost:8080/'];
+
+let appServerAddresses = [];
+
+// Read in addresses
+try {
+    let lines = fs.readFileSync('../addresses_of_machines.txt').toString().split("\n");
+    // lines[0]: front ends, lines[1]: app servers. Addresses are separated by comma and space ", "
+    let appServerLine = lines[1].replace(/\s+/g, '');  // remove whitespace
+    appServerAddresses = appServerLine.split(MACHINE_ADDRESSES_SEPARATOR);
+
+    console.log("appServerAddresses:");
+    console.log(appServerAddresses);
+} catch (err) {
+    console.error(err);
+}
+
+
 let appServerAxiosClients = new Array(appServerAddresses.length);
 for (let i = 0; i < appServerAxiosClients.length; i++) {
     appServerAxiosClients[i] = axios.create({
