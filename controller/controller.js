@@ -11,14 +11,16 @@ const {
 // Don't add whitespace here, rely on replace() regex for that
 const MACHINE_ADDRESSES_SEPARATOR = ",";
 
+// 2^32 - 1
+const KEYSPACE_MAX = 4294967295;
+const KEY_CHURN_FRACTION_LIMIT = 0.3; // TODO testing
+const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX * KEY_CHURN_FRACTION_LIMIT); 
+
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
 const AXIOS_CLIENT_KEEP_ALIVE_MSECS = 20000;
-const KEY_CHURN_LIMIT = 2000; 
 const SLICES_LIMIT = 100; 
 
-// 2^32 - 1
-const KEYSPACE_MAX = 4294967295;
 
 http.globalAgent.maxSockets = 200;  // Max concurrent request for each axios instance
 
@@ -36,13 +38,18 @@ try {
 
     console.log("appServerAddresses:");
     console.log(appServerAddresses);
+
+    console.log("frontEndAddresses:");
+    console.log(frontEndAddresses);
 } catch (err) {
     console.error(err);
 }
 
-
 let frontEndAxiosClients = new Array(frontEndAddresses.length);
 let appServerAxiosClients = new Array(appServerAddresses.length);
+
+
+let isInitialRunLoadBalancingRun = true;
 
 const compareReqMaxH = (a, b) => {
     if (a.reqNum >= b.reqNum) {
@@ -87,6 +94,10 @@ let sortedSliceToServer = [
 ]; // TODO TESTING VALUES
 // slicesInfo: {Slice: reqNum}
 let slicesInfo = {};
+for (const sliceAndServerObj of sortedSliceToServer) {
+    slicesInfo[JSON.stringify(sliceAndServerObj.slice)] = 0;
+}
+
 // appServersInfo: [load]
 let appServersInfo = []; 
 // serverSlices: [max_heap<reqNum, Slice>]
@@ -125,9 +136,21 @@ function initialize() {
 }
 
 async function periodicMonitoringAndLoadBalancing() {
-    // Populates slicesInfo
-    await getLoadFromAppServers();
-    
+    // Only get load if not initial run. 
+    // TODO If initial run generate assignment? 
+    if (!isInitialRunLoadBalancingRun) {
+        // Populates slicesInfo
+        await getLoadFromAppServers();
+    }
+    isInitialRunLoadBalancingRun = false;
+
+    // // Populates slicesInfo
+    // await getLoadFromAppServers();
+    // isInitialRunLoadBalancingRun = false;
+
+  
+
+    // TODO testing print
     console.log("BEFORE ALG SLICES INFO:");
     console.log(slicesInfo);
     console.log("BEFORE ALG SORTEDSLICETOSERVER:");
@@ -145,6 +168,7 @@ async function periodicMonitoringAndLoadBalancing() {
     move(); 
     split();  
 
+    // TODO testing print
     console.log("AFTER ALG SLICES INFO:");
     console.log(slicesInfo);
     console.log("AFTER ALG SORTEDSLICETOSERVER:");
@@ -302,6 +326,8 @@ function merge() {
 
     let slicesIndexToRemove = new Set(); 
 
+    let keyChurn = 0;
+
     // merge continuous cold slices
     // TODO: constraining for one merge or allowing multiple slices merge
     for (let i = 0; i < coldSlices.length; i++) {
@@ -384,6 +410,7 @@ function move() {
         minHeapServerLoad.push({load: appServersInfo[i], serverIndex: i}); 
     }
 
+    let keyChurn = 0;
     let prevColdest = new Set(); 
     while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > 1.25 ) {
         // get hottest and coldest server
