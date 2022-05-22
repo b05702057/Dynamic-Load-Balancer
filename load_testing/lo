@@ -1,0 +1,99 @@
+{
+  "aggregate": {
+    "counters": {
+      "vusers.created_by_name.Key value request": 1,
+      "vusers.created": 1,
+      "http.requests": 1,
+      "http.codes.500": 1,
+      "http.responses": 1,
+      "vusers.failed": 0,
+      "vusers.completed": 1
+    },
+    "rates": {
+      "http.request_rate": 1
+    },
+    "firstCounterAt": 1653195563840,
+    "firstHistogramAt": 1653195563881,
+    "lastCounterAt": 1653195563883,
+    "lastHistogramAt": 1653195563883,
+    "firstMetricAt": 1653195563840,
+    "lastMetricAt": 1653195563883,
+    "period": 1653195560000,
+    "summaries": {
+      "http.response_time": {
+        "min": 5,
+        "max": 5,
+        "count": 1,
+        "p50": 5,
+        "median": 5,
+        "p75": 5,
+        "p90": 5,
+        "p95": 5,
+        "p99": 5,
+        "p999": 5
+      },
+      "vusers.session_length": {
+        "min": 42.2,
+        "max": 42.2,
+        "count": 1,
+        "p50": 42.5,
+        "median": 42.5,
+        "p75": 42.5,
+        "p90": 42.5,
+        "p95": 42.5,
+        "p99": 42.5,
+        "p999": 42.5
+      }
+    }
+  },
+  "intermediate": [
+    {
+      "counters": {
+        "vusers.created_by_name.Key value request": 1,
+        "vusers.created": 1,
+        "http.requests": 1,
+        "http.codes.500": 1,
+        "http.responses": 1,
+        "vusers.failed": 0,
+        "vusers.completed": 1
+      },
+      "rates": {
+        "http.request_rate": 1
+      },
+      "http.request_rate": null,
+      "firstCounterAt": 1653195563840,
+      "firstHistogramAt": 1653195563881,
+      "lastCounterAt": 1653195563883,
+      "lastHistogramAt": 1653195563883,
+      "firstMetricAt": 1653195563840,
+      "lastMetricAt": 1653195563883,
+      "period": "1653195560000",
+      "summaries": {
+        "http.response_time": {
+          "min": 5,
+          "max": 5,
+          "count": 1,
+          "p50": 5,
+          "median": 5,
+          "p75": 5,
+          "p90": 5,
+          "p95": 5,
+          "p99": 5,
+          "p999": 5
+        },
+        "vusers.session_length": {
+          "min": 42.2,
+          "max": 42.2,
+          "count": 1,
+          "p50": 42.5,
+          "median": 42.5,
+          "p75": 42.5,
+          "p90": 42.5,
+          "p95": 42.5,
+          "p99": 42.5,
+          "p999": 42.5
+        }
+      }
+    }
+  ]
+}
