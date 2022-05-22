@@ -302,11 +302,11 @@ if (cluster.isMaster) {
 
 
     app.post('/kv-request', async (req, res) => {
-        console.log(`Worker ${process.pid} serving kv-request`);
+        // console.log(`Worker ${process.pid} serving kv-request`);
 
         const { requestType, key, value } = req.body;
 
-        console.log(req.body);
+        // console.log(req.body);
 
         // Make sure that key slice find and updating request count does not 
         // happen across any async point to avoid using locks.

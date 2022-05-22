@@ -185,9 +185,10 @@ keys = Array.from(keys);
 
 // define load patterns
 // sample_lists = generateSampleLists(key_num, NORMAL, UNIFORM, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
-sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
-// // 2 peak loads shifting right
-// sample_lists = generateSampleLists(20, [10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 10, 10, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+// sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
+// // 2 peak loads
+// sample_lists = generateSampleLists(10, [1000, 1000, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1000, 1000, 1, 1, 1, 1, 1, 1, 1], [1000, 1, 1000, 1, 1, 1, 1, 1, 1, 1]);
+sample_lists = generateSampleLists(key_num, [1, 2, 10, 3, 3, 3, 3, 3, 1, 1], [1, 2, 2, 3, 3, 3, 10, 10, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));

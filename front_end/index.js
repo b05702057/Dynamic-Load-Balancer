@@ -281,11 +281,11 @@ if (cluster.isMaster) {
     });
 
     app.post('/kv-request', async (req, res) => {
-        console.log(`Front end worker ${process.pid} serving kv-request`);
+        // console.log(`Front end worker ${process.pid} serving kv-request`);
 
         const { requestType, key, value } = req.body;
 
-        console.log(req.body);
+        // console.log(req.body);
 
         // Find which server to route to by hashing key and checking shard map (sortedSliceToServer)
 
@@ -303,6 +303,8 @@ if (cluster.isMaster) {
         } else {
             appServerIndexToRoute = sliceAndServerObj.serverIndex;
         }
+
+        // console.log("Key is: " + key + ", Server selected: " + appServerIndexToRoute.toString() + ", hashedKeyInt " + hashedKeyInt.toString());
 
         appServerAxiosClients[appServerIndexToRoute].post('/kv-request', {
             requestType: requestType,

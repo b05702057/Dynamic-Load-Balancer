@@ -1,16 +1,18 @@
 config:
   target: "http://localhost:3000"
   phases:
-    - duration: 5
-      arrivalRate: 5
-      name: Warm up
-    - duration: 20
-      arrivalRate: 5
-      rampTo: 100
-      name: Ramp up load
-    - duration: 20
-      arrivalRate: 100
-      name: Sustained load
+    - duration: 30
+      arrivalRate: 200
+      name: Phase 1
+    - duration: 30
+      arrivalRate: 200
+      name: Phase 2
+    - duration: 30
+      arrivalRate: 200
+      name: Phase 3
+  http:
+    # HTTP requests from all virtual users will be sent over these same connections.
+    pool: 500
   payload:
       # path is relative to the location of the test script
       path: "users.csv"
@@ -19,6 +21,7 @@ config:
         - "value"
         - "requestType"
       order: sequence
+      cast: false
 
 scenarios:
   - name: "Key value request"
