@@ -32,7 +32,7 @@ const REQUEST_LOAD_HUB_MESSAGE = 'requestLoad';
 const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
 
 const REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 10000;
-const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 10000;
+const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 1800;
 
 if (cluster.isMaster) {
     console.log(`Total num cpus: ${totalNumCPUs}`);
