@@ -1,3 +1,4 @@
 node_modules
 dynamodb_local_latest
 metrics_log.txt
+cse223b_dynamic_load_balancer_key.pem
