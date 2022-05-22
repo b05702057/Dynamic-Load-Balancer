@@ -27,7 +27,7 @@ const KEY_CHURN_FRACTION_LIMIT = 0.3; // TODO testing
 const KEY_CHURN_LIMIT = Math.floor(KEYSPACE_MAX_INCLUSIVE * KEY_CHURN_FRACTION_LIMIT); 
 
 const HOT_SLICE_THRESHOLD_RATIO_TO_AVG = 2; 
-const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 0.5;
+const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 1;
 
 const MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO = 1.25;
 
@@ -188,12 +188,13 @@ async function periodicMonitoringAndLoadBalancing() {
     // Calculate load and update appServersInfo
     calServerLoad(); 
 
-    // Extract max and min load to calculate imbalance
-    const minServerLoad = Math.min(...appServersInfo);
+    // Extract max load and calculate mean load to calculate imbalance
     const maxServerLoad = Math.max(...appServersInfo);
-    const imbalance = maxServerLoad / minServerLoad;
+    const meanServerLoad = appServersInfo.reduce((partialSum, a) => partialSum + a, 0) / appServersInfo.length;
+    const imbalance = maxServerLoad / meanServerLoad;
 
     // Log imbalance
+    console.log('CONSISTENT_HASHING_MODE=' + CONSISTENT_HASHING_MODE + ', Imbalance: ' + imbalance.toString());
     logger.info('CONSISTENT_HASHING_MODE=' + CONSISTENT_HASHING_MODE + ', Imbalance: ' + imbalance.toString());
 
     
@@ -313,6 +314,7 @@ function sendUpdatedMappings() {
 }
 
 
+
 function genServerSlices(){
     let newServerSlices = [];  
     
@@ -331,7 +333,6 @@ function genServerSlices(){
     
 }
 
-// Calculate load and update appServersInfo
 function calServerLoad() {
     let newServersInfo = [];
      
@@ -368,7 +369,7 @@ function merge() {
     // get all cold slices
     for (let i = 0; i < sortedSliceToServer.length; i++){
         let slice = JSON.parse(JSON.stringify(sortedSliceToServer[i].slice)); 
-        if (slicesInfo[JSON.stringify(slice)] < coldSliceTres){
+        if (slicesInfo[JSON.stringify(slice)] < coldSliceThres){
 
             // get index in sortedSliceToServer to find adjacent slices
             // req_num is for checking if we should do more than one merge
@@ -383,7 +384,7 @@ function merge() {
     // merge continuous cold slices
     // TODO: constraining for one merge or allowing multiple slices merge
     for (let i = 0; i < coldSlices.length; i++) {
-        if(i > 0 && ((coldSlices[i-1].index+1) == coldSlices[i].index) && coldSlices[i].reqNum < coldSliceTres){
+        if(i > 0 && ((coldSlices[i-1].index+1) == coldSlices[i].index)){
             let firstSlice = JSON.parse(JSON.stringify(coldSlices[i-1].slice)); 
             let secondSlice = JSON.parse(JSON.stringify(coldSlices[i].slice)); 
 
@@ -394,6 +395,11 @@ function merge() {
             // merge two slices
             let mergedSlice = {start: firstSlice.start, end: secondSlice.end}; 
             let mergedReq = slicesInfo[JSON.stringify(firstSlice)] + slicesInfo[JSON.stringify(secondSlice)]; 
+
+            // ignore merging the two slices if the merged slice will have reqNum > avgReqPerSlice
+            if (mergedReq > avgReqPerSlice) {
+                continue; 
+            }
 
             // add keyChurn if two slices are on different servers
             // and move request load
@@ -466,8 +472,9 @@ function move() {
 
     let keyChurn = 0;
     let prevColdest = new Set(); 
+    let newSortedSliceToServer = []; 
 
-    while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO ) {
+    while(!maxHeapServerLoad.isEmpty() && maxHeapServerLoad.peek().load / minHeapServerLoad.peek().load > MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO) {
         // get hottest and coldest server
         let hottestServerIndex = maxHeapServerLoad.peek().serverIndex; 
         let coldestServerIndex = minHeapServerLoad.peek().serverIndex;  
@@ -478,11 +485,13 @@ function move() {
         }
 
         // prevent moving the hottest slice back-and-forth
-        if(prevColdest.has(hottestServerIndex)){
+        // or the hottest server has no qualified slice to move
+        if(prevColdest.has(hottestServerIndex) || serverSlices[hottestServerIndex].isEmpty()){
             maxHeapServerLoad.pop(); 
             continue; 
         }
         prevColdest.add(coldestServerIndex); 
+
 
         // get information of hottest slice
         let hottestSlice = serverSlices[hottestServerIndex].peek().slice;
@@ -495,18 +504,20 @@ function move() {
             console.log("Breaking move because of key churn limit");
             break;
         }
-
-        console.log("MOVING!!!");
         
         // update heaps 
-        
         let hottestLoad = maxHeapServerLoad.peek().load - hottestSliceReq; 
         let coldestLoad = minHeapServerLoad.peek().load + hottestSliceReq; 
 
-        if (coldestLoad > hottestLoad) {
-            maxHeapServerLoad.pop();
-            continue;
+        // do not move the slice if the coldest server will have a higher load after moving the hottest slice
+        // the hottest slice will stay in the hottest server
+        if (coldestLoad > maxHeapServerLoad.peek().load) {
+            newSortedSliceToServer.push({slice: serverSlices[hottestServerIndex].peek().slice, serverIndex: hottestServerIndex}); 
+            serverSlices[hottestServerIndex].pop(); 
+            continue; 
         }
+
+        console.log("MOVING!!!");
 
         maxHeapServerLoad.pop(); 
         minHeapServerLoad.pop(); 
@@ -527,7 +538,6 @@ function move() {
     }
 
     // update moved slices' server index in sortedSliceToServer
-    let newSortedSliceToServer = []; 
     
     for(let i = 0; i < serverSlices.length; i++) {
         //let clonedSlices = structuredClone(serverSlices[i]); 
@@ -556,6 +566,7 @@ function split() {
         // check whether the reqNum is higher than threshold
         // and whether the slice can still be split
         if(reqNum > hotSliceThres && slice.end > slice.start) {
+            console.log('SPLITTING!');
             let mid = Math.floor((slice.end - slice.start) / 2) + slice.start; 
             let newSlice = {start: slice.start, end: mid};
 
@@ -578,10 +589,9 @@ function updateVars() {
 
     calAvgReq();
 
-    coldSliceTres = avgReqPerSlice * COLD_SLICE_THRESHOLD_RATIO_TO_AVG; 
+    coldSliceThres = avgReqPerSlice * COLD_SLICE_THRESHOLD_RATIO_TO_AVG; 
     hotSliceThres = avgReqPerSlice * HOT_SLICE_THRESHOLD_RATIO_TO_AVG + 1; 
-
-    keyChurn = 0; 
+    sliceLowerBound = appServerAddresses.length; 
 }
 
 
