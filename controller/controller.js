@@ -32,7 +32,7 @@ const COLD_SLICE_THRESHOLD_RATIO_TO_AVG = 1;
 const MOVE_THRESHOLD_RELATIVE_SERVER_LOAD_RATIO = 1.25;
 
 // Number of slices per server in initial assignment
-const DYNAMIC_LOAD_BALANCING_NUM_INITIAL_SLICES_PER_SERVER = 2;
+const DYNAMIC_LOAD_BALANCING_NUM_INITIAL_SLICES_PER_SERVER = 3;
 
 const LOAD_BALANCING_INTERVAL_MILLISECONDS = 5000;
 const AXIOS_CLIENT_TIMEOUT = 3000;
@@ -146,7 +146,7 @@ function generateInitialAssignment() {
     
     let numTotalInitialSlices = numSlicesPerServer * appServerAddresses.length;
 
-    // Each intial slice's length (except maybe the last which will need to ensure not to exceed KEYSPACE_MAX_INCLUSIVE)
+    // Each intial slice's length (except maybe the last which will have end be KEYSPACE_MAX_INCLUSIVE)
     let sliceLength = Math.floor((KEYSPACE_MAX_INCLUSIVE + 1) / numTotalInitialSlices);
 
     let curSliceStart = 0;
@@ -154,8 +154,12 @@ function generateInitialAssignment() {
     // Update global sortedSliceToServer
     for (let serverIndex = 0; serverIndex < appServerAddresses.length; ++serverIndex) {
         for (let serverSliceIdx = 0; serverSliceIdx < numSlicesPerServer; ++serverSliceIdx) {
-            // Slice end is sliceStart + length - 1. Make sure not to exceed KEYSPACE_MAX_INCLUSIVE
-            let cursliceEnd = Math.min(curSliceStart + sliceLength - 1, KEYSPACE_MAX_INCLUSIVE);
+            // Slice end is sliceStart + length - 1. Unless last slice then set to KEYSPACE_MAX_INCLUSIVE
+            let cursliceEnd = curSliceStart + sliceLength - 1;
+            if (serverIndex === appServerAddresses.length - 1 && serverSliceIdx === numSlicesPerServer - 1) {
+                cursliceEnd = KEYSPACE_MAX_INCLUSIVE;
+            }
+            
             // Push entry to sortedSliceToServer
             sortedSliceToServer.push({
                 slice: {
