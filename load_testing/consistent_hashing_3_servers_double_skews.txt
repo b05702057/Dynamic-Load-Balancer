@@ -1,0 +1,340 @@
+Started phase 0 (FIRST PHASE), duration: 30s @ 00:26:24(+0000) 2022-05-23
+Report @ 00:26:34(+0000) 2022-05-23
+Elapsed time: 10 seconds
+  Scenarios launched:  13281
+  Scenarios completed: 13270
+  Requests completed:  13270
+  Mean response/sec: 1322.71
+  Response time (msec):
+    min: 1
+    max: 40
+    median: 2
+    p95: 12
+    p99: 22
+  Codes:
+    200: 13270
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 40
+    median: 2
+    p95: 12
+    p99: 22
+  plugins.metrics-by-endpoint./kv-request.codes.200: 13270
+
+Report @ 00:26:44(+0000) 2022-05-23
+Elapsed time: 20 seconds
+  Scenarios launched:  15272
+  Scenarios completed: 15278
+  Requests completed:  15278
+  Mean response/sec: 1539.52
+  Response time (msec):
+    min: 0
+    max: 146
+    median: 2
+    p95: 11
+    p99: 25
+  Codes:
+    200: 15278
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 0
+    max: 146
+    median: 2
+    p95: 11
+    p99: 25
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15278
+
+Report @ 00:26:54(+0000) 2022-05-23
+Elapsed time: 30 seconds
+  Scenarios launched:  15202
+  Scenarios completed: 15204
+  Requests completed:  15204
+  Mean response/sec: 1526.31
+  Response time (msec):
+    min: 1
+    max: 154
+    median: 2
+    p95: 11
+    p99: 20
+  Codes:
+    200: 15204
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 154
+    median: 2
+    p95: 11
+    p99: 20
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15204
+
+Report @ 00:27:04(+0000) 2022-05-23
+Elapsed time: 40 seconds
+  Scenarios launched:  15034
+  Scenarios completed: 15033
+  Requests completed:  15033
+  Mean response/sec: 1527.85
+  Response time (msec):
+    min: 0
+    max: 451
+    median: 2
+    p95: 49
+    p99: 97
+  Codes:
+    200: 15033
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 0
+    max: 451
+    median: 2
+    p95: 49
+    p99: 97
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15033
+
+Started phase 1 (SECOND PHASE), duration: 30s @ 00:27:05(+0000) 2022-05-23
+Report @ 00:27:14(+0000) 2022-05-23
+Elapsed time: 50 seconds
+  Scenarios launched:  15128
+  Scenarios completed: 15114
+  Requests completed:  15114
+  Mean response/sec: 1528.08
+  Response time (msec):
+    min: 1
+    max: 133
+    median: 2
+    p95: 12
+    p99: 23
+  Codes:
+    200: 15114
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 133
+    median: 2
+    p95: 12
+    p99: 23
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15114
+
+Report @ 00:27:24(+0000) 2022-05-23
+Elapsed time: 1 minute, 0 seconds
+  Scenarios launched:  15267
+  Scenarios completed: 15281
+  Requests completed:  15281
+  Mean response/sec: 1540.57
+  Response time (msec):
+    min: 1
+    max: 159
+    median: 2
+    p95: 10
+    p99: 26
+  Codes:
+    200: 15281
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 159
+    median: 2
+    p95: 10
+    p99: 26
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15281
+
+Report @ 00:27:34(+0000) 2022-05-23
+Elapsed time: 1 minute, 10 seconds
+  Scenarios launched:  15200
+  Scenarios completed: 15199
+  Requests completed:  15199
+  Mean response/sec: 1533.8
+  Response time (msec):
+    min: 0
+    max: 139
+    median: 2
+    p95: 11
+    p99: 21
+  Codes:
+    200: 15199
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 0
+    max: 139
+    median: 2
+    p95: 11
+    p99: 21
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15199
+
+Report @ 00:27:44(+0000) 2022-05-23
+Elapsed time: 1 minute, 20 seconds
+  Scenarios launched:  15201
+  Scenarios completed: 15202
+  Requests completed:  15202
+  Mean response/sec: 1532.36
+  Response time (msec):
+    min: 1
+    max: 130
+    median: 2
+    p95: 10
+    p99: 20
+  Codes:
+    200: 15202
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 130
+    median: 2
+    p95: 10
+    p99: 20
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15202
+
+Started phase 2 (THIRD PHASE), duration: 30s @ 00:27:44(+0000) 2022-05-23
+Report @ 00:27:54(+0000) 2022-05-23
+Elapsed time: 1 minute, 30 seconds
+  Scenarios launched:  15180
+  Scenarios completed: 15166
+  Requests completed:  15166
+  Mean response/sec: 1530.24
+  Response time (msec):
+    min: 1
+    max: 134
+    median: 2
+    p95: 9
+    p99: 19
+  Codes:
+    200: 15166
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 134
+    median: 2
+    p95: 9
+    p99: 19
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15166
+
+Report @ 00:28:04(+0000) 2022-05-23
+Elapsed time: 1 minute, 40 seconds
+  Scenarios launched:  14866
+  Scenarios completed: 14880
+  Requests completed:  14880
+  Mean response/sec: 1498.59
+  Response time (msec):
+    min: 1
+    max: 1363
+    median: 2
+    p95: 109.5
+    p99: 1057
+  Codes:
+    200: 14880
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 1363
+    median: 2
+    p95: 109.5
+    p99: 1057
+  plugins.metrics-by-endpoint./kv-request.codes.200: 14880
+
+Report @ 00:28:14(+0000) 2022-05-23
+Elapsed time: 1 minute, 50 seconds
+  Scenarios launched:  15159
+  Scenarios completed: 15160
+  Requests completed:  15160
+  Mean response/sec: 1509.86
+  Response time (msec):
+    min: 0
+    max: 133
+    median: 2
+    p95: 10
+    p99: 22
+  Codes:
+    200: 15160
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 0
+    max: 133
+    median: 2
+    p95: 10
+    p99: 22
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15160
+
+Report @ 00:28:24(+0000) 2022-05-23
+Elapsed time: 2 minutes, 0 seconds
+  Scenarios launched:  15138
+  Scenarios completed: 15135
+  Requests completed:  15135
+  Mean response/sec: 1544.69
+  Response time (msec):
+    min: 1
+    max: 263
+    median: 2
+    p95: 10
+    p99: 21
+  Codes:
+    200: 15135
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 263
+    median: 2
+    p95: 10
+    p99: 21
+  plugins.metrics-by-endpoint./kv-request.codes.200: 15135
+
+Report @ 00:28:24(+0000) 2022-05-23
+Elapsed time: 2 minutes, 1 second
+  Scenarios launched:  72
+  Scenarios completed: 78
+  Requests completed:  78
+  Mean response/sec: 135.19
+  Response time (msec):
+    min: 1
+    max: 136
+    median: 2
+    p95: 130
+    p99: 135.7
+  Codes:
+    200: 78
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 1
+    max: 136
+    median: 2
+    p95: 130
+    p99: 135.7
+  plugins.metrics-by-endpoint./kv-request.codes.200: 78
+
+All virtual users finished
+Summary report @ 00:28:25(+0000) 2022-05-23
+  Scenarios launched:  180000
+  Scenarios completed: 180000
+  Requests completed:  180000
+  Mean response/sec: 1478.44
+  Response time (msec):
+    min: 0
+    max: 1363
+    median: 2
+    p95: 14
+    p99: 62
+  Scenario counts:
+    Front end 2: 89715 (49.842%)
+    Front end 1: 90285 (50.158%)
+  Codes:
+    200: 180000
+  plugins.metrics-by-endpoint.response_time./kv-request:
+    min: 0
+    max: 1363
+    median: 2
+    p95: 14
+    p99: 62
+  plugins.metrics-by-endpoint./kv-request.codes.200: 180000
+
+2022-05-23 00:26:24.595 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: NaN 
+2022-05-23 00:26:29.604 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.145320197044335 
+2022-05-23 00:26:34.604 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.1458333333333335 
+2022-05-23 00:26:39.605 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.120566437268396 
+2022-05-23 00:26:44.611 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.128437917222964 
+2022-05-23 00:26:49.609 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.150986926429121 
+2022-05-23 00:26:54.607 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.119582664526485 
+2022-05-23 00:26:59.609 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.1358040689387066 
+2022-05-23 00:27:04.614 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 2.1424410540915395 
+2022-05-23 00:27:09.615 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8228936059382734 
+2022-05-23 00:27:14.615 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9575586095392077 
+2022-05-23 00:27:19.618 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9559164733178653 
+2022-05-23 00:27:24.621 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9242708054589241 
+2022-05-23 00:27:29.623 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9654234654234655 
+2022-05-23 00:27:34.625 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.974805682122755 
+2022-05-23 00:27:39.627 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9553812524109553 
+2022-05-23 00:27:44.628 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.9631336405529956 
+2022-05-23 00:27:49.631 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8702507107779787 
+2022-05-23 00:27:54.636 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8868431662410965 
+2022-05-23 00:27:59.638 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8560537537149504 
+2022-05-23 00:28:04.641 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8701463140123804 
+2022-05-23 00:28:09.642 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8344554455445545 
+2022-05-23 00:28:14.641 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8608163265306124 
+2022-05-23 00:28:19.642 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8483231707317074 
+2022-05-23 00:28:24.645 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: 1.8401839609083068 
+2022-05-23 00:28:29.645 INFO  CONSISTENT_HASHING_MODE=true, Imbalance: NaN 
