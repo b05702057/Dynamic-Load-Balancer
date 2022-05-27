@@ -37,7 +37,7 @@ function getRandomString(max_length) {
 
 function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) {
     cur_phase = phases[phase_idx];
-    request_num = cur_phase.duration * cur_phase.arrivalRate;
+    request_num = Math.ceil(cur_phase.duration * cur_phase.arrivalRate / thread_num);
     sample_list = sample_lists[phase_idx];
     for (let i = 0; i < request_num; i++) {
         idx = getRandomInt(sample_list.length);
@@ -46,10 +46,10 @@ function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) 
     return phase_idx + 1;
 }
 
-function generateKeysForAllPhases(phases, sample_lists, element_list, keys) {
+function generateKeysForAllPhases(phases, sample_lists, element_list, keys, thread_num) {
     var phase_idx = 0;
     for (let i = 0; i < phases.length; i++) {
-        phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys);
+        phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys, thread_num);
     }
 }
 
@@ -166,9 +166,14 @@ function generatePhasePattern(key_num, distribution) {
     return sample_list;
 }
 
-function generateSampleLists(key_num, ...distributions) {
+function generateSampleLists(...distributions_and_key_nums) {
     var sample_lists = []
-    distributions.forEach(distribution => {
+    distributions_and_key_nums.forEach(distribution_and_key_num => {
+        var distribution = distribution_and_key_num[0];
+        var key_num = distribution_and_key_num[1];
+        if (typeof distribution !== 'string' && key_num !== distribution.length) {
+            throw Error("wrong key length");
+        }
         sample_lists.push(generatePhasePattern(key_num, distribution));
     })
     return sample_lists;
@@ -188,11 +193,12 @@ keys = Array.from(keys);
 // sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
 // // 2 peak loads
 // sample_lists = generateSampleLists(10, [1000, 1000, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1000, 1000, 1, 1, 1, 1, 1, 1, 1], [1000, 1, 1000, 1, 1, 1, 1, 1, 1, 1]);
-sample_lists = generateSampleLists(key_num, [1, 2, 10, 3, 3, 3, 3, 3, 1, 1], [1, 2, 2, 3, 3, 3, 10, 10, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+sample_lists = generateSampleLists([[1, 2, 10, 3, 3, 3, 3, 3, 1, 1], 10], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
 var phases = doc.config.phases;
+var thread_num = doc.config.thread;
 
 // generate elements for each phase
 var element_list = []; // output
