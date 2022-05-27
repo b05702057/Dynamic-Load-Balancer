@@ -2,13 +2,13 @@ config:
   target: "http://localhost:3000"
   phases:
     - duration: 30
-      arrivalRate: 2000
+      arrivalRate: 200
       name: Phase 1
     - duration: 30
-      arrivalRate: 2000
+      arrivalRate: 200
       name: Phase 2
     - duration: 30
-      arrivalRate: 2000
+      arrivalRate: 200
       name: Phase 3
   http:
     # HTTP requests from all virtual users will be sent over these same connections.

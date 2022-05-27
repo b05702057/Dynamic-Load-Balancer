@@ -38,6 +38,7 @@ function getRandomString(max_length) {
 function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) {
     cur_phase = phases[phase_idx];
     request_num = Math.ceil(cur_phase.duration * cur_phase.arrivalRate / thread_num);
+    request_num += Math.ceil(request_num / 10)
     sample_list = sample_lists[phase_idx];
     for (let i = 0; i < request_num; i++) {
         idx = getRandomInt(sample_list.length);
