@@ -2,13 +2,13 @@ config:
   target: "http://localhost:3000"
   phases:
     - duration: 30
-      arrivalRate: 200
+      arrivalRate: 2000
       name: Phase 1
     - duration: 30
-      arrivalRate: 200
+      arrivalRate: 2000
       name: Phase 2
     - duration: 30
-      arrivalRate: 200
+      arrivalRate: 2000
       name: Phase 3
   http:
     # HTTP requests from all virtual users will be sent over these same connections.
@@ -27,8 +27,18 @@ scenarios:
   - name: "Key value request"
     flow:
       - post:
-          url: "/kv-request"
+          url: "http://localhost:3000/kv-request"
           json:
             key: "{{ key }}"
             value: "{{ value }}"
             requestType: "{{ requestType }}"
+    weight: 1
+  - name: "Key value request2"
+    flow:
+      - post:
+          url: "http://localhost:3001/kv-request"
+          json:
+            key: "{{ key }}"
+            value: "{{ value }}"
+            requestType: "{{ requestType }}"
+    weight: 1

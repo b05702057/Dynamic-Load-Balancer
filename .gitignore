@@ -2,3 +2,7 @@ node_modules
 dynamodb_local_latest.tar.gz
 dynamodb_local_latest
 metrics_log.txt
+app_server/dump.rdb
+app_server/redis-stable.tar.gz
+app_server/redis-stable/
+cse223b_dynamic_load_balancer_key.pem

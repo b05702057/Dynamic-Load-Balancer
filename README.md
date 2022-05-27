@@ -115,6 +115,21 @@ Set Items:
 
     node setItem.js
     
+# App_servers on AWS
+
+install node:
+
+    https://tecadmin.net/install-latest-nodejs-amazon-linux/
+   
+install git:
+
+    sudo yum install git
+    
+install redis:
+
+    https://redis.io/docs/getting-started/installation/install-redis-from-source/
+    
+   
 Check Other resources:
 
 https://axios-http.com/docs/api_intro 
