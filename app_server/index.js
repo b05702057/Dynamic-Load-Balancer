@@ -5,7 +5,12 @@ const   express     = require('express'),
         Hub         = require('cluster-hub')
         util        = require('util'),
         redis       = require('redis'),
-        farmhash    = require('farmhash');
+        farmhash    = require('farmhash'),
+        https       = require('https'),
+        AWS         = require('aws-sdk');
+
+
+
 
 const commandLineArgs = require('minimist')(process.argv.slice(2));
 
@@ -33,6 +38,23 @@ const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
 
 const REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 10000;
 const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 1800;
+
+const DYNAMODB_CLIENT_KEEP_ALIVE_MSECS = 20000;  // delay for initial keep alive probe
+// Set region
+AWS.config.update({region: 'us-west-2'});
+
+
+const httpsAgent = new https.Agent({
+    keepAlive: true, 
+    keepAliveMsecs: DYNAMODB_CLIENT_KEEP_ALIVE_MSECS,
+    maxSockets: 100
+});
+const ddb = new AWS.DynamoDB({
+    httpOptions: {
+        httpsAgent
+    }
+});
+
 
 if (cluster.isMaster) {
     console.log(`Total num cpus: ${totalNumCPUs}`);
@@ -331,13 +353,59 @@ if (cluster.isMaster) {
         if (requestType === "get") {
             try {
                 const gotValue = await redisClient.get(key);
-                res.send(gotValue);
+                // If not in redis (got empty string), fetch from dynamodb
+                if (gotValue === "") {
+                    try {
+                        var params = {
+                            TableName: 'CSE223B_KEY_VALUE_TABLE',
+                            Key: {
+                                'KEY': {S: key},
+                            },
+                            // ProjectionExpression: 'VALUE'
+                        };
+                        // Call DynamoDB to get the item from table
+                        const ddbGetRes = await ddb.getItem(params).promise();
+                        console.log("Successful getItem from dynamodb");
+                        console.log(ddbGetRes);
+                        res.send(ddbGetRes);
+                    } catch (err) {
+                        console.log("Error getting from dynamodb");
+                        console.log(err);
+                    }
+                    
+                } else {
+                    res.send(gotValue);
+                }
             } catch (err) {
                 res.status(500).send({
                     message: 'Error: failed while trying redis get'
                 });
             }
         } else if (requestType === "set") {
+            // Set in dynamo first before setting in redis cache
+            try {
+                var params = {
+                    TableName: 'CSE223B_KEY_VALUE_TABLE',
+                    Item: {
+                        'KEY' : {S: key},
+                        'VALUE' : {S: value}
+                    }
+                };
+                // Call DynamoDB to add the item to the table
+                const ddbPutRes = await ddb.putItem(params).promise();
+                console.log("Successful putItem in dynamodb");
+                console.log(ddbPutRes);
+            } catch (err) {
+                console.log("Error putting in dynamodb");
+                console.log(err);
+                res.status(500).send({
+                    message: 'Error: failed while trying putting in dynamodb'
+                });
+
+                return;
+            }
+
+            // Set in redis cache
             try {
                 let ret = await redisClient.set(key, value);
                 res.send(ret);
