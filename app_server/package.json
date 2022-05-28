@@ -9,6 +9,7 @@
   "author": "Kiet Pham",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.1145.0",
     "body-parser": "^1.20.0",
     "cluster": "^0.7.7",
     "cluster-hub": "^0.1.2",
