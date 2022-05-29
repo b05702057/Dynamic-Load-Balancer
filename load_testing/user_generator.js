@@ -64,21 +64,19 @@ function addRequestValues(element_list, max_value_length) {
 }
 
 // make sure "set" is called before "get" for each key
-function addRequestTypes(element_list) {
+function addRequestTypes(element_list, get_percentage) {
     var stored_keys = new Set();
     var output_list = []
     element_list.forEach(element => {
+        var key = element.split(",")[0];
+
         // 0 stands for "set", and 1 stands for get
-        random = getRandomInt(2);
-        if (random === 0) {
-            output_list.push(element + ",set");
-            stored_keys.add(element);
+        random = getRandomInt(100);
+        if (random < get_percentage && stored_keys.has(key)) {
+            output_list.push(element + ",get");
         } else {
-            if (stored_keys.has(element)) {
-                output_list.push(element + ",get");
-            } else {
-                output_list.push(element + ",set");
-            }
+            output_list.push(element + ",set");
+            stored_keys.add(key);
         }
     })
     return output_list;
@@ -208,6 +206,8 @@ generateKeysForAllPhases(phases, sample_lists, element_list, keys);
 // write the elements
 const max_value_length = 100;
 element_list = addRequestValues(element_list, max_value_length);
-element_list = addRequestTypes(element_list);
+
+var get_percentage = 60 // 99% would be get requests
+element_list = addRequestTypes(element_list, get_percentage); 
 var elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
