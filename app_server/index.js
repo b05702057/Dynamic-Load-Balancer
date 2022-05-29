@@ -353,8 +353,8 @@ if (cluster.isMaster) {
         if (requestType === "get") {
             try {
                 const gotValue = await redisClient.get(key);
-                // If not in redis (got empty string), fetch from dynamodb
-                if (gotValue === "") {
+                // If not in redis (got null), fetch from dynamodb
+                if (gotValue === null) {
                     try {
                         var params = {
                             TableName: 'CSE223B_KEY_VALUE_TABLE',
@@ -368,12 +368,23 @@ if (cluster.isMaster) {
                         console.log("Successful getItem from dynamodb");
                         console.log(ddbGetRes);
                         res.send(ddbGetRes);
+
+                        // Update redis cache, no need to wait for completion (hence 
+                        // doing after sending res)
+                        if (ddbGetRes.Item !== undefined && ddbGetRes.Item.VALUE !== undefined && ddbGetRes.Item.VALUE.S !== undefined)  {
+                            console.log("UPDATING CACHE here!");
+                            let valueGotFromDDB = ddbGetRes.Item.VALUE.S;
+                            redisClient.set(key, valueGotFromDDB);
+                        } else {
+                            console.log("WARNING: Item was not set in ddb? Likely got empty object.");
+                        }
                     } catch (err) {
-                        console.log("Error getting from dynamodb");
+                        console.log("Error getting from dynamodb (or updating redis cache)");
                         console.log(err);
                     }
                     
                 } else {
+                    console.log("gotvalue: ", gotValue);
                     res.send(gotValue);
                 }
             } catch (err) {

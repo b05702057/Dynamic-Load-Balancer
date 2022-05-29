@@ -192,7 +192,7 @@ async function test223BOperation(key, value) {
     //     };
     //     // Call DynamoDB to create the table
     //     const ddbCreateRes = await ddb.deleteTable(delParams).promise();
-    //     console.log("Successful created table in dynamodb");
+    //     console.log("Successful deleted table in dynamodb");
     //     console.log(ddbCreateRes);
     // } catch (err) {
     //     if (err && err.code === 'ResourceNotFoundException') {
