@@ -315,10 +315,16 @@ if (cluster.isMaster) {
         })
         .catch(function (error) {
             console.log(error);
-            // Forward error
-            res.status(error.response.status).send({
-                message: error.response.data.message
-            });
+            // Forward error if status exists
+            if (error.response !== undefined && error.response.status != undefined) {
+                res.status(error.response.status).send({
+                    message: error.response.data.message
+                });
+            } else {
+                res.status(500).send({
+                    message: "Unknown status for error!"
+                });
+            }
         });
     });
     

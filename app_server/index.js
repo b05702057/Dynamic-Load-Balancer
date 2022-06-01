@@ -38,6 +38,7 @@ const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
 
 const REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 10000;
 const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 1800;
+const REDIS_EXPIRE_KEY_TTL_SECONDS = 20;
 
 const DYNAMODB_CLIENT_KEEP_ALIVE_MSECS = 20000;  // delay for initial keep alive probe
 // Set region
@@ -374,7 +375,7 @@ if (cluster.isMaster) {
                         if (ddbGetRes.Item !== undefined && ddbGetRes.Item.VALUE !== undefined && ddbGetRes.Item.VALUE.S !== undefined)  {
                             console.log("UPDATING CACHE here!");
                             let valueGotFromDDB = ddbGetRes.Item.VALUE.S;
-                            redisClient.set(key, valueGotFromDDB);
+                            redisClient.set(key, valueGotFromDDB, {EX: REDIS_EXPIRE_KEY_TTL_SECONDS});
                         } else {
                             console.log("WARNING: Item was not set in ddb? Likely got empty object.");
                         }
@@ -384,7 +385,17 @@ if (cluster.isMaster) {
                     }
                     
                 } else {
+                    // Key was in cache.
                     console.log("gotvalue: ", gotValue);
+
+                    try {
+                        console.log("Updating expire ttl");
+                        redisClient.expire(key, REDIS_EXPIRE_KEY_TTL_SECONDS);
+                    } catch (err) {
+                        // Not crucial if error updating expiry
+                        console.log("Error updating key expire tll"); 
+                    }
+
                     res.send(gotValue);
                 }
             } catch (err) {
@@ -418,7 +429,7 @@ if (cluster.isMaster) {
 
             // Set in redis cache
             try {
-                let ret = await redisClient.set(key, value);
+                let ret = await redisClient.set(key, value, {EX: REDIS_EXPIRE_KEY_TTL_SECONDS});
                 res.send(ret);
             } catch (err) {
                 res.status(500).send({
