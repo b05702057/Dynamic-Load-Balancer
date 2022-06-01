@@ -164,121 +164,121 @@ if (cluster.isMaster) {
     app.use(bodyParser.urlencoded({extended: true}));
 
 
-    app.get('/', (req, res) => {
-        console.log(`Worker ${process.pid} serving root`);
+    // app.get('/', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving root`);
         
-        axios.get('http://localhost:8080/')
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-        });
-    });
+    //     axios.get('http://localhost:8080/')
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //     });
+    // });
 
-    app.get('/list-users', (req, res) => {
-        console.log(`Worker ${process.pid} serving get list-users`);
+    // app.get('/list-users', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get list-users`);
 
-        axios.get('http://localhost:8080/list-users')
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-        });
-    });
+    //     axios.get('http://localhost:8080/list-users')
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //     });
+    // });
 
-    app.get('/user-info/:userId', (req, res) => {
-        const { userId } = req.params;
-        console.log(`Worker ${process.pid} serving user-info with userID ${userId}`);
+    // app.get('/user-info/:userId', (req, res) => {
+    //     const { userId } = req.params;
+    //     console.log(`Worker ${process.pid} serving user-info with userID ${userId}`);
          
-        axios.get(`http://localhost:8080/user-info/${userId}`)
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-        });
-    });
+    //     axios.get(`http://localhost:8080/user-info/${userId}`)
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //     });
+    // });
 
 
-    app.get('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving get add-user`);
+    // app.get('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get add-user`);
 
-        axios.get('http://localhost:8080/add-user')
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-        });
-    });
+    //     axios.get('http://localhost:8080/add-user')
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //     });
+    // });
 
-    app.post('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving post add-user`);
+    // app.post('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving post add-user`);
 
-        const { title, username } = req.body;
+    //     const { title, username } = req.body;
 
-        axios({
-            method: 'post',
-            url: 'http://localhost:8080/add-user',
-            data: {
-                title: title,
-                username: username
-            }
-        })
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-            console.log("here");
-        });
-    });
+    //     axios({
+    //         method: 'post',
+    //         url: 'http://localhost:8080/add-user',
+    //         data: {
+    //             title: title,
+    //             username: username
+    //         }
+    //     })
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //         console.log("here");
+    //     });
+    // });
 
-    app.get('/long-computation/:N', (req, res) => {
-        console.log(`Worker ${process.pid} serving long-computation`);
+    // app.get('/long-computation/:N', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving long-computation`);
 
-        const { N } = req.params;
+    //     const { N } = req.params;
 
-        axios.get(`http://localhost:8080/long-computation/${N}`)
-        .then(function (response) {
-            // handle success
-            res.send(response.data);
-        })
-        .catch(function (error) {
-            // handle error
-            console.log(error);
-        })
-        .then(function () {
-            // always executed
-        });
-    });
+    //     axios.get(`http://localhost:8080/long-computation/${N}`)
+    //     .then(function (response) {
+    //         // handle success
+    //         res.send(response.data);
+    //     })
+    //     .catch(function (error) {
+    //         // handle error
+    //         console.log(error);
+    //     })
+    //     .then(function () {
+    //         // always executed
+    //     });
+    // });
 
     app.post('/kv-request', async (req, res) => {
         // console.log(`Front end worker ${process.pid} serving kv-request`);

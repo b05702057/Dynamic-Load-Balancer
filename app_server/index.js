@@ -262,66 +262,66 @@ if (cluster.isMaster) {
         }
     ];
 
-    app.get('/', (req, res) => {
-        console.log(`Worker ${process.pid} serving root`);
+    // app.get('/', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving root`);
 
-        res.send('<h1>ROOT ROUTE!</h1>');
-    });
+    //     res.send('<h1>ROOT ROUTE!</h1>');
+    // });
 
-    app.get('/list-users', (req, res) => {
-        console.log(`Worker ${process.pid} serving get list-users`);
-        res.render('./index', { userArr });
-    });
+    // app.get('/list-users', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get list-users`);
+    //     res.render('./index', { userArr });
+    // });
 
-    app.get('/user-info/:userId', (req, res) => {
-        const { userId } = req.params;
+    // app.get('/user-info/:userId', (req, res) => {
+    //     const { userId } = req.params;
 
-        console.log(`Worker ${process.pid} serving user-info userId: ${userId}`);
+    //     console.log(`Worker ${process.pid} serving user-info userId: ${userId}`);
 
-        const user = userArr.find(user => user.id === userId);
-        res.send(user);
-    });
+    //     const user = userArr.find(user => user.id === userId);
+    //     res.send(user);
+    // });
 
 
-    app.get('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving get add-user`);
+    // app.get('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get add-user`);
 
-        res.render('./add_user');
-    });
+    //     res.render('./add_user');
+    // });
 
-    app.post('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving post add-user`);
+    // app.post('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving post add-user`);
 
-        const { title, username } = req.body;
+    //     const { title, username } = req.body;
 
-        const foundUser = userArr.find(user => user.username === username);
-        if (typeof foundUser === 'undefined') {
-            userArr.push({
-                id: userArr.length,
-                username: username,
-                title: title
-            });
-            res.redirect('/list-users');
-        } else {
-            res.send("ERROR: USER ALREADY EXISTS!");
-        }
-    });
+    //     const foundUser = userArr.find(user => user.username === username);
+    //     if (typeof foundUser === 'undefined') {
+    //         userArr.push({
+    //             id: userArr.length,
+    //             username: username,
+    //             title: title
+    //         });
+    //         res.redirect('/list-users');
+    //     } else {
+    //         res.send("ERROR: USER ALREADY EXISTS!");
+    //     }
+    // });
 
-    app.get('/long-computation/:N', (req, res) => {
-        console.log(`Worker ${process.pid} serving long-computation`);
+    // app.get('/long-computation/:N', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving long-computation`);
 
-        const { N } = req.params;
+    //     const { N } = req.params;
 
-        let sum = 0;
+    //     let sum = 0;
 
-        for (let i = 0; i < N; i++) {
-            for (let j = 0; j < N; j++) {
-                sum += i * j;
-            }
-        }
+    //     for (let i = 0; i < N; i++) {
+    //         for (let j = 0; j < N; j++) {
+    //             sum += i * j;
+    //         }
+    //     }
 
-        res.send({sum});
-    });
+    //     res.send({sum});
+    // });
 
 
     app.post('/kv-request', async (req, res) => {
