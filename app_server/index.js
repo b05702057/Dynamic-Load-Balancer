@@ -366,7 +366,7 @@ if (cluster.isMaster) {
                         };
                         // Call DynamoDB to get the item from table
                         const ddbGetRes = await ddb.getItem(params).promise();
-                        console.log("Successful getItem from dynamodb");
+                        //console.log("Successful getItem from dynamodb");
                         console.log(ddbGetRes);
                         res.send(ddbGetRes);
 
@@ -386,10 +386,10 @@ if (cluster.isMaster) {
                     
                 } else {
                     // Key was in cache.
-                    console.log("gotvalue: ", gotValue);
+                    //console.log("gotvalue: ", gotValue);
 
                     try {
-                        console.log("Updating expire ttl");
+                        //console.log("Updating expire ttl");
                         redisClient.expire(key, REDIS_EXPIRE_KEY_TTL_SECONDS);
                     } catch (err) {
                         // Not crucial if error updating expiry
@@ -415,8 +415,8 @@ if (cluster.isMaster) {
                 };
                 // Call DynamoDB to add the item to the table
                 const ddbPutRes = await ddb.putItem(params).promise();
-                console.log("Successful putItem in dynamodb");
-                console.log(ddbPutRes);
+                //console.log("Successful putItem in dynamodb");
+                //console.log(ddbPutRes);
             } catch (err) {
                 console.log("Error putting in dynamodb");
                 console.log(err);
