@@ -1,4 +1,5 @@
 node_modules
+dynamodb_local_latest.tar.gz
 dynamodb_local_latest
 metrics_log.txt
 app_server/dump.rdb

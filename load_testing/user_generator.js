@@ -37,7 +37,8 @@ function getRandomString(max_length) {
 
 function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) {
     cur_phase = phases[phase_idx];
-    request_num = cur_phase.duration * cur_phase.arrivalRate;
+    request_num = Math.ceil(cur_phase.duration * cur_phase.arrivalRate / thread_num);
+    request_num += Math.ceil(request_num / 10)
     sample_list = sample_lists[phase_idx];
     for (let i = 0; i < request_num; i++) {
         idx = getRandomInt(sample_list.length);
@@ -46,10 +47,10 @@ function generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys) 
     return phase_idx + 1;
 }
 
-function generateKeysForAllPhases(phases, sample_lists, element_list, keys) {
+function generateKeysForAllPhases(phases, sample_lists, element_list, keys, thread_num) {
     var phase_idx = 0;
     for (let i = 0; i < phases.length; i++) {
-        phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys);
+        phase_idx = generatePhaseKeys(phases, phase_idx, sample_lists, element_list, keys, thread_num);
     }
 }
 
@@ -63,21 +64,19 @@ function addRequestValues(element_list, max_value_length) {
 }
 
 // make sure "set" is called before "get" for each key
-function addRequestTypes(element_list) {
+function addRequestTypes(element_list, get_percentage) {
     var stored_keys = new Set();
     var output_list = []
     element_list.forEach(element => {
+        var key = element.split(",")[0];
+
         // 0 stands for "set", and 1 stands for get
-        random = getRandomInt(2);
-        if (random === 0) {
-            output_list.push(element + ",set");
-            stored_keys.add(element);
+        random = getRandomInt(100);
+        if (random < get_percentage && stored_keys.has(key)) {
+            output_list.push(element + ",get");
         } else {
-            if (stored_keys.has(element)) {
-                output_list.push(element + ",get");
-            } else {
-                output_list.push(element + ",set");
-            }
+            output_list.push(element + ",set");
+            stored_keys.add(key);
         }
     })
     return output_list;
@@ -166,9 +165,14 @@ function generatePhasePattern(key_num, distribution) {
     return sample_list;
 }
 
-function generateSampleLists(key_num, ...distributions) {
+function generateSampleLists(...distributions_and_key_nums) {
     var sample_lists = []
-    distributions.forEach(distribution => {
+    distributions_and_key_nums.forEach(distribution_and_key_num => {
+        var distribution = distribution_and_key_num[0];
+        var key_num = distribution_and_key_num[1];
+        if (typeof distribution !== 'string' && key_num !== distribution.length) {
+            throw Error("wrong key length");
+        }
         sample_lists.push(generatePhasePattern(key_num, distribution));
     })
     return sample_lists;
@@ -188,11 +192,12 @@ keys = Array.from(keys);
 // sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
 // // 2 peak loads
 // sample_lists = generateSampleLists(10, [1000, 1000, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1000, 1000, 1, 1, 1, 1, 1, 1, 1], [1000, 1, 1000, 1, 1, 1, 1, 1, 1, 1]);
-sample_lists = generateSampleLists(key_num, [1, 2, 10, 3, 3, 3, 3, 3, 1, 1], [1, 2, 2, 3, 3, 3, 10, 10, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
+sample_lists = generateSampleLists([[1, 2, 10, 3, 3, 3, 3, 3, 1, 1], 10], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
 var phases = doc.config.phases;
+var thread_num = doc.config.thread;
 
 // generate elements for each phase
 var element_list = []; // output
@@ -201,6 +206,8 @@ generateKeysForAllPhases(phases, sample_lists, element_list, keys);
 // write the elements
 const max_value_length = 100;
 element_list = addRequestValues(element_list, max_value_length);
-element_list = addRequestTypes(element_list);
+
+var get_percentage = 60 // 99% would be get requests
+element_list = addRequestTypes(element_list, get_percentage); 
 var elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
