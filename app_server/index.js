@@ -38,6 +38,7 @@ const UPDATE_RESPONSIBLE_SLICES_HUB_MESSAGE = 'updateResponsibleSlices';
 
 const REDIS_KEEP_ALIVE_TIMEOUT_MILLISECONDS = 10000;
 const REDIS_CONNECTION_TIMEOUT_MILLISECONDS = 1800;
+const REDIS_EXPIRE_KEY_TTL_SECONDS = 20;
 
 const DYNAMODB_CLIENT_KEEP_ALIVE_MSECS = 20000;  // delay for initial keep alive probe
 // Set region
@@ -261,66 +262,66 @@ if (cluster.isMaster) {
         }
     ];
 
-    app.get('/', (req, res) => {
-        console.log(`Worker ${process.pid} serving root`);
+    // app.get('/', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving root`);
 
-        res.send('<h1>ROOT ROUTE!</h1>');
-    });
+    //     res.send('<h1>ROOT ROUTE!</h1>');
+    // });
 
-    app.get('/list-users', (req, res) => {
-        console.log(`Worker ${process.pid} serving get list-users`);
-        res.render('./index', { userArr });
-    });
+    // app.get('/list-users', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get list-users`);
+    //     res.render('./index', { userArr });
+    // });
 
-    app.get('/user-info/:userId', (req, res) => {
-        const { userId } = req.params;
+    // app.get('/user-info/:userId', (req, res) => {
+    //     const { userId } = req.params;
 
-        console.log(`Worker ${process.pid} serving user-info userId: ${userId}`);
+    //     console.log(`Worker ${process.pid} serving user-info userId: ${userId}`);
 
-        const user = userArr.find(user => user.id === userId);
-        res.send(user);
-    });
+    //     const user = userArr.find(user => user.id === userId);
+    //     res.send(user);
+    // });
 
 
-    app.get('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving get add-user`);
+    // app.get('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving get add-user`);
 
-        res.render('./add_user');
-    });
+    //     res.render('./add_user');
+    // });
 
-    app.post('/add-user', (req, res) => {
-        console.log(`Worker ${process.pid} serving post add-user`);
+    // app.post('/add-user', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving post add-user`);
 
-        const { title, username } = req.body;
+    //     const { title, username } = req.body;
 
-        const foundUser = userArr.find(user => user.username === username);
-        if (typeof foundUser === 'undefined') {
-            userArr.push({
-                id: userArr.length,
-                username: username,
-                title: title
-            });
-            res.redirect('/list-users');
-        } else {
-            res.send("ERROR: USER ALREADY EXISTS!");
-        }
-    });
+    //     const foundUser = userArr.find(user => user.username === username);
+    //     if (typeof foundUser === 'undefined') {
+    //         userArr.push({
+    //             id: userArr.length,
+    //             username: username,
+    //             title: title
+    //         });
+    //         res.redirect('/list-users');
+    //     } else {
+    //         res.send("ERROR: USER ALREADY EXISTS!");
+    //     }
+    // });
 
-    app.get('/long-computation/:N', (req, res) => {
-        console.log(`Worker ${process.pid} serving long-computation`);
+    // app.get('/long-computation/:N', (req, res) => {
+    //     console.log(`Worker ${process.pid} serving long-computation`);
 
-        const { N } = req.params;
+    //     const { N } = req.params;
 
-        let sum = 0;
+    //     let sum = 0;
 
-        for (let i = 0; i < N; i++) {
-            for (let j = 0; j < N; j++) {
-                sum += i * j;
-            }
-        }
+    //     for (let i = 0; i < N; i++) {
+    //         for (let j = 0; j < N; j++) {
+    //             sum += i * j;
+    //         }
+    //     }
 
-        res.send({sum});
-    });
+    //     res.send({sum});
+    // });
 
 
     app.post('/kv-request', async (req, res) => {
@@ -365,16 +366,16 @@ if (cluster.isMaster) {
                         };
                         // Call DynamoDB to get the item from table
                         const ddbGetRes = await ddb.getItem(params).promise();
-                        console.log("Successful getItem from dynamodb");
-                        console.log(ddbGetRes);
+                        // console.log("Successful getItem from dynamodb");
+                        // console.log(ddbGetRes);
                         res.send(ddbGetRes);
 
                         // Update redis cache, no need to wait for completion (hence 
                         // doing after sending res)
                         if (ddbGetRes.Item !== undefined && ddbGetRes.Item.VALUE !== undefined && ddbGetRes.Item.VALUE.S !== undefined)  {
-                            console.log("UPDATING CACHE here!");
+                            // console.log("UPDATING CACHE here!");
                             let valueGotFromDDB = ddbGetRes.Item.VALUE.S;
-                            redisClient.set(key, valueGotFromDDB);
+                            redisClient.set(key, valueGotFromDDB, {EX: REDIS_EXPIRE_KEY_TTL_SECONDS});
                         } else {
                             console.log("WARNING: Item was not set in ddb? Likely got empty object.");
                         }
@@ -384,7 +385,17 @@ if (cluster.isMaster) {
                     }
                     
                 } else {
-                    console.log("gotvalue: ", gotValue);
+                    // Key was in cache.
+                    // console.log("gotvalue: ", gotValue);
+
+                    try {
+                        // console.log("Updating expire ttl");
+                        redisClient.expire(key, REDIS_EXPIRE_KEY_TTL_SECONDS);
+                    } catch (err) {
+                        // Not crucial if error updating expiry
+                        console.log("Error updating key expire tll"); 
+                    }
+
                     res.send(gotValue);
                 }
             } catch (err) {
@@ -404,8 +415,8 @@ if (cluster.isMaster) {
                 };
                 // Call DynamoDB to add the item to the table
                 const ddbPutRes = await ddb.putItem(params).promise();
-                console.log("Successful putItem in dynamodb");
-                console.log(ddbPutRes);
+                // console.log("Successful putItem in dynamodb");
+                // console.log(ddbPutRes);
             } catch (err) {
                 console.log("Error putting in dynamodb");
                 console.log(err);
@@ -418,7 +429,7 @@ if (cluster.isMaster) {
 
             // Set in redis cache
             try {
-                let ret = await redisClient.set(key, value);
+                let ret = await redisClient.set(key, value, {EX: REDIS_EXPIRE_KEY_TTL_SECONDS});
                 res.send(ret);
             } catch (err) {
                 res.status(500).send({
