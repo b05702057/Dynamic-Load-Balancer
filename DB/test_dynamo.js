@@ -7,45 +7,45 @@ var ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 
 
 async function testOperation() {
-    // var createParams = {
-    //     AttributeDefinitions: [
-    //       {
-    //         AttributeName: 'CUSTOMER_ID',
-    //         AttributeType: 'N'
-    //       },
-    //       {
-    //         AttributeName: 'CUSTOMER_NAME',
-    //         AttributeType: 'S'
-    //       }
-    //     ],
-    //     KeySchema: [
-    //       {
-    //         AttributeName: 'CUSTOMER_ID',
-    //         KeyType: 'HASH'
-    //       },
-    //       {
-    //         AttributeName: 'CUSTOMER_NAME',
-    //         KeyType: 'RANGE'
-    //       }
-    //     ],
-    //   //   ProvisionedThroughput: {
-    //   //     ReadCapacityUnits: 1,
-    //   //     WriteCapacityUnits: 1
-    //   //   },
-    //     BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
-    //     TableName: 'CUSTOMER_LIST',
-    //     StreamSpecification: {
-    //       StreamEnabled: false
-    //     }
-    // };
-    // // Call DynamoDB to create the table
-    // ddb.createTable(createParams, function(err, data) {
-    // if (err) {
-    //     console.log("Error", err);
-    // } else {
-    //     console.log("Table Created", data);
-    // }
-    // });
+    var createParams = {
+        AttributeDefinitions: [
+          {
+            AttributeName: 'CUSTOMER_ID',
+            AttributeType: 'N'
+          },
+          {
+            AttributeName: 'CUSTOMER_NAME',
+            AttributeType: 'S'
+          }
+        ],
+        KeySchema: [
+          {
+            AttributeName: 'CUSTOMER_ID',
+            KeyType: 'HASH'
+          },
+          {
+            AttributeName: 'CUSTOMER_NAME',
+            KeyType: 'RANGE'
+          }
+        ],
+      //   ProvisionedThroughput: {
+      //     ReadCapacityUnits: 1,
+      //     WriteCapacityUnits: 1
+      //   },
+        BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
+        TableName: 'CUSTOMER_LIST',
+        StreamSpecification: {
+          StreamEnabled: false
+        }
+    };
+    // Call DynamoDB to create the table
+    ddb.createTable(createParams, function(err, data) {
+    if (err) {
+        console.log("Error", err);
+    } else {
+        console.log("Table Created", data);
+    }
+    });
 
 
     // // Call DynamoDB to delete the specified table
@@ -203,7 +203,39 @@ async function test223BOperation(key, value) {
     //         console.log("Success", data);
     //     }
     // }
-
+    // Create table
+    try {
+        var createParams = {
+            AttributeDefinitions: [
+                {
+                    AttributeName: 'KEY',
+                    AttributeType: 'S'
+                }
+            ],
+            KeySchema: [
+                {
+                    AttributeName: 'KEY',
+                    KeyType: 'HASH'
+                }
+            ],
+            // ProvisionedThroughput: {
+            //     ReadCapacityUnits: 1,
+            //     WriteCapacityUnits: 1
+            // },
+            BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
+            TableName: 'CSE223B_KEY_VALUE_TABLE',
+            StreamSpecification: {
+                StreamEnabled: false
+            }
+        };
+        // Call DynamoDB to create the table
+        const ddbCreateRes = await ddb.createTable(createParams).promise();
+        console.log("Successful created table in dynamodb");
+        console.log(ddbCreateRes);
+    } catch (err) {
+        console.log("Error creating table in dynamodb");
+        console.log(err);
+    }
 
     // // Listing up to 10 tables
     // ddb.listTables({Limit: 10}, function(err, data) {

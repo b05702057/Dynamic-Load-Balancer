@@ -98,22 +98,27 @@ List Tables:
 List Specific Table Entries:
 
     aws dynamodb scan --table-name BasicStore --endpoint-url http://localhost:8888
-    
-Create Table:
+   
+Local Experiments:
+    Create Table:
 
+        node createLocalTable.js
+
+    Delete Table:
+
+        node deleteLocalTable.js
+
+    Get Items:
+
+        node getLocalItem.js
+
+    Set Items:
+
+        node setLocalItem.js
+    
+Config a New Table before each Test:
+    
     node createTable.js
-    
-Delete Table:
-
-    node deleteTable.js
-    
-Get Items:
-
-    node getItem.js
-
-Set Items:
-
-    node setItem.js
     
 # App_servers on AWS
 
