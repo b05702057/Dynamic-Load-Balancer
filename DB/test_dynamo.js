@@ -203,7 +203,39 @@ async function test223BOperation(key, value) {
     //         console.log("Success", data);
     //     }
     // }
-
+    // Create table
+    try {
+        var createParams = {
+            AttributeDefinitions: [
+                {
+                    AttributeName: 'KEY',
+                    AttributeType: 'S'
+                }
+            ],
+            KeySchema: [
+                {
+                    AttributeName: 'KEY',
+                    KeyType: 'HASH'
+                }
+            ],
+            // ProvisionedThroughput: {
+            //     ReadCapacityUnits: 1,
+            //     WriteCapacityUnits: 1
+            // },
+            BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
+            TableName: 'CSE223B_KEY_VALUE_TABLE',
+            StreamSpecification: {
+                StreamEnabled: false
+            }
+        };
+        // Call DynamoDB to create the table
+        const ddbCreateRes = await ddb.createTable(createParams).promise();
+        console.log("Successful created table in dynamodb");
+        console.log(ddbCreateRes);
+    } catch (err) {
+        console.log("Error creating table in dynamodb");
+        console.log(err);
+    }
 
     // // Listing up to 10 tables
     // ddb.listTables({Limit: 10}, function(err, data) {

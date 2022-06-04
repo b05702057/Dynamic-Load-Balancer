@@ -366,14 +366,14 @@ if (cluster.isMaster) {
                         };
                         // Call DynamoDB to get the item from table
                         const ddbGetRes = await ddb.getItem(params).promise();
-                        //console.log("Successful getItem from dynamodb");
-                        console.log(ddbGetRes);
+                        // console.log("Successful getItem from dynamodb");
+                        // console.log(ddbGetRes);
                         res.send(ddbGetRes);
 
                         // Update redis cache, no need to wait for completion (hence 
                         // doing after sending res)
                         if (ddbGetRes.Item !== undefined && ddbGetRes.Item.VALUE !== undefined && ddbGetRes.Item.VALUE.S !== undefined)  {
-                            console.log("UPDATING CACHE here!");
+                            // console.log("UPDATING CACHE here!");
                             let valueGotFromDDB = ddbGetRes.Item.VALUE.S;
                             redisClient.set(key, valueGotFromDDB, {EX: REDIS_EXPIRE_KEY_TTL_SECONDS});
                         } else {
@@ -386,10 +386,10 @@ if (cluster.isMaster) {
                     
                 } else {
                     // Key was in cache.
-                    //console.log("gotvalue: ", gotValue);
+                    // console.log("gotvalue: ", gotValue);
 
                     try {
-                        //console.log("Updating expire ttl");
+                        // console.log("Updating expire ttl");
                         redisClient.expire(key, REDIS_EXPIRE_KEY_TTL_SECONDS);
                     } catch (err) {
                         // Not crucial if error updating expiry
@@ -415,8 +415,8 @@ if (cluster.isMaster) {
                 };
                 // Call DynamoDB to add the item to the table
                 const ddbPutRes = await ddb.putItem(params).promise();
-                //console.log("Successful putItem in dynamodb");
-                //console.log(ddbPutRes);
+                // console.log("Successful putItem in dynamodb");
+                // console.log(ddbPutRes);
             } catch (err) {
                 console.log("Error putting in dynamodb");
                 console.log(err);
