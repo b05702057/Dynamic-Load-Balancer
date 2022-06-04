@@ -5,6 +5,12 @@ AWS.config.update({region: 'us-west-2'});
 // Create the DynamoDB service object
 var ddb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 
+function sleepFor(sleepDuration){
+    var now = new Date().getTime();
+    while(new Date().getTime() < now + sleepDuration){ 
+        /* Do nothing */ 
+    }
+}
 
 async function test223BOperation(key, value) {
     // Delete table
@@ -25,40 +31,43 @@ async function test223BOperation(key, value) {
         } else {
             console.log("Success", data);
         }
-    }
+    } finally {
+        // Create table
+        try {
+            var createParams = {
+                AttributeDefinitions: [
+                    {
+                        AttributeName: 'KEY',
+                        AttributeType: 'S'
+                    }
+                ],
+                KeySchema: [
+                    {
+                        AttributeName: 'KEY',
+                        KeyType: 'HASH'
+                    }
+                ],
+                // ProvisionedThroughput: {
+                //     ReadCapacityUnits: 1,
+                //     WriteCapacityUnits: 1
+                // },
+                BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
+                TableName: 'CSE223B_KEY_VALUE_TABLE',
+                StreamSpecification: {
+                    StreamEnabled: false
+                }
+            };
+            // DynamoDB needs some time to know the table is deleted on all servers.
+            sleepFor(3000);
 
-    // Create table
-    try {
-        var createParams = {
-            AttributeDefinitions: [
-                {
-                    AttributeName: 'KEY',
-                    AttributeType: 'S'
-                }
-            ],
-            KeySchema: [
-                {
-                    AttributeName: 'KEY',
-                    KeyType: 'HASH'
-                }
-            ],
-            // ProvisionedThroughput: {
-            //     ReadCapacityUnits: 1,
-            //     WriteCapacityUnits: 1
-            // },
-            BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
-            TableName: 'CSE223B_KEY_VALUE_TABLE',
-            StreamSpecification: {
-                StreamEnabled: false
-            }
-        };
-        // Call DynamoDB to create the table
-        const ddbCreateRes = await ddb.createTable(createParams).promise();
-        console.log("Successful created table in dynamodb");
-        console.log(ddbCreateRes);
-    } catch (err) {
-        console.log("Error creating table in dynamodb");
-        console.log(err);
+            // Call DynamoDB to create the table
+            const ddbCreateRes = await ddb.createTable(createParams).promise();
+            console.log("Successful created table in dynamodb");
+            console.log(ddbCreateRes);
+        } catch (err) {
+            console.log("Error creating table in dynamodb");
+            console.log(err);
+        }
     }
 }
   
