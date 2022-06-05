@@ -192,7 +192,7 @@ keys = Array.from(keys);
 // sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
 // // 2 peak loads
 // sample_lists = generateSampleLists(10, [1000, 1000, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1000, 1000, 1, 1, 1, 1, 1, 1, 1], [1000, 1, 1000, 1, 1, 1, 1, 1, 1, 1]);
-sample_lists = generateSampleLists([[1, 2, 10, 3, 3, 3, 3, 3, 1, 1], 10], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
+sample_lists = generateSampleLists([NORMAL, 1000], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
@@ -211,3 +211,38 @@ var get_percentage = 60 // 99% would be get requests
 element_list = addRequestTypes(element_list, get_percentage); 
 var elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
+
+
+    // Create table
+    try {
+        var createParams = {
+            AttributeDefinitions: [
+                {
+                    AttributeName: 'KEY',
+                    AttributeType: 'S'
+                }
+            ],
+            KeySchema: [
+                {
+                    AttributeName: 'KEY',
+                    KeyType: 'HASH'
+                }
+            ],
+            // ProvisionedThroughput: {
+            //     ReadCapacityUnits: 1,
+            //     WriteCapacityUnits: 1
+            // },
+            BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
+            TableName: 'CSE223B_KEY_VALUE_TABLE',
+            StreamSpecification: {
+                StreamEnabled: false
+            }
+        };
+        // Call DynamoDB to create the table
+        const ddbCreateRes = await ddb.createTable(createParams).promise();
+        console.log("Successful created table in dynamodb");
+        console.log(ddbCreateRes);
+    } catch (err) {
+        console.log("Error creating table in dynamodb");
+        console.log(err);
+    }
