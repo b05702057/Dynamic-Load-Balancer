@@ -307,21 +307,45 @@ if (cluster.isMaster) {
     //     }
     // });
 
-    // app.get('/long-computation/:N', (req, res) => {
-    //     console.log(`Worker ${process.pid} serving long-computation`);
+    app.post('/long-computation/', (req, res) => {
+        console.log(`Worker ${process.pid} serving long-computation`);
 
-    //     const { N } = req.params;
+        const { key } = req.body;
 
-    //     let sum = 0;
+        // console.log(req.body);
 
-    //     for (let i = 0; i < N; i++) {
-    //         for (let j = 0; j < N; j++) {
-    //             sum += i * j;
-    //         }
-    //     }
+        // Make sure that key slice find and updating request count does not 
+        // happen across any async point to avoid using locks.
 
-    //     res.send({sum});
-    // });
+        // Check that this server is indeed responsible for the slice containing the
+        // hashed key
+        const hashedKeyInt = farmhash.fingerprint32(key);
+        const slice = findSliceForKey(sortedResponsibleSlices, hashedKeyInt);
+        if (slice === null) {
+            // Use code 410 for this
+            res.status(410).send({
+                message: 'This server is not responsible for the slice serving this key'
+            });
+            return;
+        }
+
+        // Increment request count for that slice
+        // If there is error here (e.g. element is undefined) means that we didnt update both
+        // slicesInfo and sortedResponsibleSlices correctly (inconsistent view)
+        slicesInfo[JSON.stringify(slice)] += 1;
+
+        let N = parseInt(key);
+
+        let sum = 0;
+
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+                sum += i * j;
+            }
+        }
+
+        res.send({sum});
+    });
 
 
     app.post('/kv-request', async (req, res) => {

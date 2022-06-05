@@ -260,25 +260,47 @@ if (cluster.isMaster) {
     //         console.log("here");
     //     });
     // });
+    
+    app.post('/long-computation/', (req, res) => {
+        console.log(`Worker ${process.pid} serving long-computation`);
+        
+        const { key } = req.body;
 
-    // app.get('/long-computation/:N', (req, res) => {
-    //     console.log(`Worker ${process.pid} serving long-computation`);
+        const hashedKeyInt = farmhash.fingerprint32(key);
+        const sliceAndServerObj = findSliceAndServerObjForKey(sortedSliceToServer, hashedKeyInt);
 
-    //     const { N } = req.params;
+        let appServerIndexToRoute = null;
+        if (sliceAndServerObj === null) {
+            res.status(500).send({
+                message: 'ERROR: Cannot find a slice range containing the hashedKey. Shard map has holes?'
+            });
+            return;
+        } else {
+            appServerIndexToRoute = sliceAndServerObj.serverIndex;
+        }
 
-    //     axios.get(`http://localhost:8080/long-computation/${N}`)
-    //     .then(function (response) {
-    //         // handle success
-    //         res.send(response.data);
-    //     })
-    //     .catch(function (error) {
-    //         // handle error
-    //         console.log(error);
-    //     })
-    //     .then(function () {
-    //         // always executed
-    //     });
-    // });
+        // console.log("Key is: " + key + ", Server selected: " + appServerIndexToRoute.toString() + ", hashedKeyInt " + hashedKeyInt.toString());
+
+        appServerAxiosClients[appServerIndexToRoute].post('/long-computation', {
+            key: key,
+        }).then(function (response) {
+            res.send(response.data);
+        })
+        .catch(function (error) {
+            console.log(error);
+            // Forward error if status exists
+            if (error.response !== undefined && error.response.status != undefined) {
+                res.status(error.response.status).send({
+                    message: error.response.data.message
+                });
+            } else {
+                res.status(500).send({
+                    message: "Unknown status for error!"
+                });
+            }
+        });
+    });
+
 
     app.post('/kv-request', async (req, res) => {
         // console.log(`Front end worker ${process.pid} serving kv-request`);
