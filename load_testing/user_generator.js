@@ -165,11 +165,16 @@ function generatePhasePattern(key_num, distribution) {
     return sample_list;
 }
 
-function generateSampleLists(...distributions_and_key_nums) {
+function generateSampleLists(total_key_num, ...distributions_and_key_nums) {
     var sample_lists = []
     distributions_and_key_nums.forEach(distribution_and_key_num => {
         var distribution = distribution_and_key_num[0];
         var key_num = distribution_and_key_num[1];
+
+        if (key_num > total_key_num) {
+            throw Error("Please generate enough keys first!")
+        } 
+
         if (typeof distribution !== 'string' && key_num !== distribution.length) {
             throw Error("wrong key length");
         }
@@ -180,7 +185,7 @@ function generateSampleLists(...distributions_and_key_nums) {
 
 // generate keys
 var keys = new Set();
-const key_num = 10;
+const key_num = 1000;
 const max_key_length = 10
 while (keys.size < key_num) {
     keys.add(getRandomString(max_key_length));
@@ -192,7 +197,7 @@ keys = Array.from(keys);
 // sample_lists = generateSampleLists(key_num, [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1], [1, 2, 6, 3, 3, 3, 3, 3, 1, 1]);
 // // 2 peak loads
 // sample_lists = generateSampleLists(10, [1000, 1000, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1000, 1000, 1, 1, 1, 1, 1, 1, 1], [1000, 1, 1000, 1, 1, 1, 1, 1, 1, 1]);
-sample_lists = generateSampleLists([[1, 2, 10, 3, 3, 3, 3, 3, 1, 1], 10], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
+sample_lists = generateSampleLists(total_key_num=key_num, [NORMAL, 1000], [[1, 2, 2, 3, 3, 3, 10, 10, 1, 1], 10], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1], 10]);
 
 // parse the yaml file to get the parameters
 const doc = yaml.load(fs.readFileSync('customized_test.yml', 'utf8'));
