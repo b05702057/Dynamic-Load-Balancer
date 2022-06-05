@@ -334,7 +334,7 @@ if (cluster.isMaster) {
         // slicesInfo and sortedResponsibleSlices correctly (inconsistent view)
         slicesInfo[JSON.stringify(slice)] += 1;
 
-        let N = parseInt(key);
+        let N = 1000;  // constant for testing
 
         let sum = 0;
 
