@@ -180,7 +180,7 @@ function generateSampleLists(...distributions_and_key_nums) {
 
 // generate keys
 var keys = new Set();
-const key_num = 10;
+const key_num = 1000;
 const max_key_length = 10
 while (keys.size < key_num) {
     keys.add(getRandomString(max_key_length));
@@ -211,38 +211,3 @@ var get_percentage = 60 // 99% would be get requests
 element_list = addRequestTypes(element_list, get_percentage); 
 var elements = element_list.join("\n");
 fs.writeFileSync('users.csv', elements);
-
-
-    // Create table
-    try {
-        var createParams = {
-            AttributeDefinitions: [
-                {
-                    AttributeName: 'KEY',
-                    AttributeType: 'S'
-                }
-            ],
-            KeySchema: [
-                {
-                    AttributeName: 'KEY',
-                    KeyType: 'HASH'
-                }
-            ],
-            // ProvisionedThroughput: {
-            //     ReadCapacityUnits: 1,
-            //     WriteCapacityUnits: 1
-            // },
-            BillingMode: 'PAY_PER_REQUEST',  // ON-DEMAND
-            TableName: 'CSE223B_KEY_VALUE_TABLE',
-            StreamSpecification: {
-                StreamEnabled: false
-            }
-        };
-        // Call DynamoDB to create the table
-        const ddbCreateRes = await ddb.createTable(createParams).promise();
-        console.log("Successful created table in dynamodb");
-        console.log(ddbCreateRes);
-    } catch (err) {
-        console.log("Error creating table in dynamodb");
-        console.log(err);
-    }
