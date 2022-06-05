@@ -308,7 +308,7 @@ if (cluster.isMaster) {
     // });
 
     app.post('/long-computation/', (req, res) => {
-        console.log(`Worker ${process.pid} serving long-computation`);
+        // console.log(`Worker ${process.pid} serving long-computation`);
 
         const { key } = req.body;
 
