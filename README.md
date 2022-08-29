@@ -1,6 +1,6 @@
 # Dynamic-Load-Balancer
 
-### A load balancer that can balance the load dynamically to prevent servers from getting too hot
+### A Slicer-like load balancer that can balance the load dynamically to prevent servers from getting too hot
 
 ## Task
 Implemented a Slicer-like algorithm to move the load away when a server is too hot and merge the slices when a server is too cold
